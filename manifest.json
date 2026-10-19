@@ -1,7 +1,7 @@
 {
   "id": "./index.html",
   "name": "マルタ・カゾエール",
-  "short_name": "マルタ数える",
+  "short_name": "マルタ・カゾエール",
   "description": "写真から丸太を自動検出し、本数を集計する業務向けWebアプリ",
   "lang": "ja",
   "start_url": "./index.html",
