@@ -2558,7 +2558,7 @@
         ort.env.wasm.numThreads = 1;
         ort.env.wasm.proxy = false;
 
-        ort.env.wasm.wasmPaths = "./";
+        ort.env.wasm.wasmPaths = new URL("./lib/", window.location.href).href;
 
         modelLoadingPromise = ort.InferenceSession.create(
           "./log_counter_v6.onnx",
