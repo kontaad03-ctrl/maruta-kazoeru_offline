@@ -1,0 +1,2786 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>マルタ・カゾエール</title>
+
+    <script src="./lib/ort.min.js"></script>
+
+    <style>
+      body {
+        font-family: Arial;
+        margin: 10px;
+      }
+      .colorbtn {
+        padding: 6px 10px;
+        border: 2px solid #666;
+        margin: 2px;
+      }
+      .active {
+        border: 4px solid orange !important;
+        font-weight: bold;
+      }
+      canvas {
+        border: 1px solid #666;
+      }
+      .help {
+        background: #f3f3f3;
+        padding: 8px;
+        border: 1px solid #ccc;
+      }
+      #photoIndex {
+        display: none;
+      }
+      #tabs button {
+        margin: 2px;
+      }
+      #status {
+        display: none;
+        background: #e8f5e9;
+        border: 1px solid #4caf50;
+        padding: 6px;
+        margin: 5px 0;
+      }
+      #helpPanel {
+        display: none;
+      }
+      #compareWindow {
+        display: none;
+        position: fixed;
+        top: 120px;
+        right: 20px;
+        width: 350px;
+        height: 300px;
+        overflow: hidden;
+        background: white;
+        border: 2px solid #666;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+        z-index: 9999;
+      }
+      #compareHeader {
+        background: #f0f0f0;
+        padding: 5px;
+        cursor: move;
+        display: flex;
+        justify-content: space-between;
+      }
+      #compareImg {
+        position: absolute;
+        left: 0;
+        top: 32px;
+        max-width: none;
+        width: 100%;
+        transform-origin: top left;
+        cursor: grab;
+        user-select: none;
+        -webkit-user-drag: none;
+        touch-action: none;
+      }
+      #resizeHandle {
+        width: 24px;
+        height: 24px;
+        position: absolute;
+        right: 0;
+        bottom: 0;
+        cursor: nwse-resize;
+        background: transparent;
+      }
+      #resizeHandle::before {
+        content: "";
+        position: absolute;
+        right: 4px;
+        bottom: 4px;
+        width: 12px;
+        height: 12px;
+        border-right: 2px solid #999;
+        border-bottom: 2px solid #999;
+        transform: rotate(0deg);
+      }
+      #historyWindow {
+        display: none;
+        position: fixed;
+        top: 100px;
+        left: 100px;
+        width: 500px;
+        height: 500px;
+        background: white;
+        border: 2px solid #666;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+        z-index: 10000;
+      }
+
+      #historyHeader {
+        background: #f0f0f0;
+        padding: 5px;
+        display: flex;
+        justify-content: space-between;
+        cursor: move;
+      }
+
+      #historyContent {
+        height: calc(100% - 40px);
+        overflow-y: auto;
+        padding: 10px;
+      }
+      #historyResizeHandle {
+        width: 24px;
+        height: 24px;
+        position: absolute;
+        right: 0;
+        bottom: 0;
+        cursor: nwse-resize;
+      }
+
+      #historyResizeHandle::before {
+        content: "";
+        position: absolute;
+        right: 4px;
+        bottom: 4px;
+        width: 12px;
+        height: 12px;
+        border-right: 2px solid #999;
+        border-bottom: 2px solid #999;
+      }
+
+      #memoDialog {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.45);
+        z-index: 20000;
+        align-items: center;
+        justify-content: center;
+      }
+
+      #memoDialogBox {
+        box-sizing: border-box;
+        width: min(420px, calc(100vw - 40px));
+        background: white;
+        border: 2px solid #666;
+        border-radius: 10px;
+        padding: 18px;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.4);
+      }
+
+      #memoDialogBox h3 {
+        margin-top: 0;
+        margin-bottom: 15px;
+      }
+
+      #projectMemo {
+        display: block;
+        box-sizing: border-box;
+        width: 100%;
+        min-height: 90px;
+        margin-top: 8px;
+        padding: 8px;
+        resize: vertical;
+        font-family: inherit;
+        font-size: 16px;
+      }
+
+      #memoDialogButtons {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        margin-top: 15px;
+      }
+
+      #memoDialogButtons button {
+        padding: 7px 16px;
+      }
+      #mobileHelpWindow {
+        display: none;
+        position: fixed;
+        top: 6px;
+        right: 6px;
+        bottom: 76px;
+        left: 6px;
+        box-sizing: border-box;
+        background: white;
+        border: 2px solid #666;
+        border-radius: 8px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+        overflow: hidden;
+        z-index: 16000;
+      }
+
+      #mobileHelpHeader {
+        box-sizing: border-box;
+        min-height: 46px;
+        padding: 8px 10px;
+        background: #f0f0f0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 18px;
+        font-weight: bold;
+      }
+
+      #mobileHelpHeader button {
+        min-width: 42px;
+        min-height: 36px;
+        border: 1px solid #999;
+        border-radius: 6px;
+        font-size: 20px;
+      }
+
+      #mobileHelpContent {
+        box-sizing: border-box;
+        height: calc(100% - 46px);
+        padding: 14px;
+        padding-bottom: 24px;
+        overflow-x: hidden;
+        overflow-y: auto;
+        font-size: 16px;
+        line-height: 1.7;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      .mobileHelpSection {
+        margin-bottom: 18px;
+      }
+
+      .mobileHelpSection b {
+        display: block;
+        margin-bottom: 6px;
+        color: #333;
+      }
+
+      .mobileHelpNote {
+        padding: 10px;
+        background: #fff3cd;
+        border: 1px solid #d6b656;
+        border-radius: 6px;
+      }
+
+      /* ===== スマホ用 ===== */
+      #rotateNotice {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: #222;
+        color: white;
+        font-size: 24px;
+        z-index: 99999;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+      }
+      /* ===== スマホ・タブレット用 ===== */
+      #mobileSettingsBtn {
+        display: none;
+      }
+      #mobileToolbar {
+        display: none;
+      }
+      #mobileSettingsPanel {
+        display: none;
+        position: fixed;
+        top: 70px;
+        left: 10px;
+        width: 260px;
+        max-height: calc(100vh - 100px);
+        overflow-y: auto;
+        background: white;
+        border: 2px solid #666;
+        border-radius: 10px;
+        padding: 10px;
+        z-index: 10001;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+      }
+      #mobileSettingsPanel button {
+        margin: 2px;
+      }
+      @media (pointer: coarse) {
+        canvas {
+          width: 100%;
+          height: auto;
+          margin-bottom: 80px;
+        }
+        body {
+          margin: 4px;
+        }
+        #desktopControls {
+          display: none;
+        }
+        #photoIndex {
+          display: block;
+          text-align: center;
+          font-size: 18px;
+          font-weight: bold;
+          margin: 6px 0;
+          color: #333;
+        }
+        #mobileSettingsBtn {
+          display: block;
+          position: fixed;
+          top: 10px;
+          left: 10px;
+          width: 50px;
+          height: 50px;
+          border-radius: 50%;
+          border: none;
+          background: rgba(0, 0, 0, 0.5);
+          color: white;
+          font-size: 24px;
+          z-index: 10000;
+        }
+        #mobileToolbar {
+          display: flex;
+          position: fixed;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          height: 70px;
+          background: #222;
+          z-index: 9999;
+          border-top: 2px solid #666;
+        }
+        #mobileToolbar button {
+          flex: 1;
+          font-size: 22px;
+          border: none;
+          background: #444;
+          color: white;
+          font-weight: bold;
+        }
+        #normalBar {
+          display: flex;
+          width: 100%;
+        }
+        #polygonBar {
+          width: 100%;
+        }
+        #normalBar button,
+        #polygonBar button {
+          flex: 1;
+        }
+        #mobileToolbar button:active {
+          background: #ff9800;
+        }
+        #historyWindow {
+          top: 6px;
+          right: 6px;
+          bottom: 76px;
+          left: 6px;
+
+          width: auto;
+          height: auto;
+
+          box-sizing: border-box;
+          z-index: 15000;
+
+          border-radius: 8px;
+          overflow: hidden;
+        }
+
+        #historyHeader {
+          box-sizing: border-box;
+          min-height: 46px;
+          padding: 8px 10px;
+
+          align-items: center;
+
+          font-size: 18px;
+          font-weight: bold;
+
+          cursor: default;
+          touch-action: none;
+        }
+
+        #historyHeader button {
+          min-width: 42px;
+          min-height: 36px;
+
+          border: 1px solid #999;
+          border-radius: 6px;
+
+          font-size: 20px;
+        }
+
+        #historyContent {
+          box-sizing: border-box;
+
+          height: calc(100% - 46px);
+
+          padding: 8px;
+          padding-bottom: 20px;
+
+          overflow-x: hidden;
+          overflow-y: auto;
+
+          -webkit-overflow-scrolling: touch;
+        }
+
+        #historyResizeHandle {
+          display: none;
+        }
+
+        .historyProjectCheckbox {
+          min-width: 24px;
+          width: 24px !important;
+
+          min-height: 24px;
+          height: 24px !important;
+        }
+
+        #historySelectionBar button {
+          min-height: 38px;
+          padding: 6px 10px;
+        }
+      }
+    </style>
+      <meta name="theme-color" content="#2e7d32" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="繝槭Ν繧ｿ繝ｻ繧ｫ繧ｾ繧ｨ繝ｼ繝ｫ" />
+    <link rel="manifest" href="./manifest.json" />
+    <link rel="icon" href="./icon.svg" type="image/svg+xml" />
+  </head>
+  <body>
+    <div id="rotateNotice">📱 横向きにしてください</div>
+    <button id="mobileSettingsBtn" onclick="mobileSettings()">⚙</button>
+    <div id="mobileSettingsPanel">
+      <b>塗り色</b>
+      <br />
+      <button id="mf_transparent" onclick="mobileSetFill('transparent')">
+        透明
+      </button>
+      <button id="mf_blue" onclick="mobileSetFill('blue')">青</button>
+      <button id="mf_red" onclick="mobileSetFill('red')">赤</button>
+      <hr />
+      <b>枠色</b>
+      <br />
+      <button id="mb_blue" onclick="mobileSetBorder('blue')">青</button>
+      <button id="mb_red" onclick="mobileSetBorder('red')">赤</button>
+      <button id="mb_black" onclick="mobileSetBorder('black')">黒</button>
+      <hr />
+      <b>マーカーサイズ</b>
+      <br />
+      <input type="range" id="mobileMsize" min="5" max="60" value="15" />
+      <hr />
+      <b>番号サイズ</b>
+      <br />
+      <input type="range" id="mobileNsize" min="20" max="80" value="40" />
+      <hr />
+      <b>重なり許容度</b>
+      <br />
+      <input type="range" id="mobileNms" min="10" max="90" value="30" />
+      <hr />
+      <b>検出信頼度</b>
+      <br />
+      <input
+        type="range"
+        id="mobileConfThreshold"
+        min="10"
+        max="90"
+        value="20"
+      />
+      <hr />
+      <button onclick="toggleNumber()">番号表示 ON/OFF</button>
+
+      <hr />
+
+      <button onclick="openMobileHelp()">❓ 使い方</button>
+
+      <hr />
+
+      <button onclick="openMobileHistory()">🕘 履歴</button>
+
+      <hr />
+
+      <button onclick="closeMobileSettings()">閉じる</button>
+    </div>
+
+    <h3>マルタ・カゾエール</h3>
+    <div id="photoIndex">📷 0 / 0</div>
+    <div id="status"></div>
+    <div id="desktopControls">
+      <input
+        type="file"
+        id="file"
+        accept="image/*"
+        multiple
+        style="display: none"
+        onchange="loadPhotos(event)"
+      />
+      <button type="button" onclick="document.getElementById('file').click()">
+        📷写真読込
+      </button>
+      <button onclick="toggleHelp()">❓ 使い方</button>
+      <input
+        type="file"
+        id="projectFile"
+        accept=".omc"
+        style="display: none"
+        onchange="loadProject(event)"
+      />
+      <button onclick="document.getElementById('projectFile').click()">
+        📂プロジェクト読込
+      </button>
+      <button onclick="exportCSV()">CSV保存</button>
+      <button onclick="saveProject()">💾プロジェクト保存</button>
+      <button onclick="undoLast()">↩ 元に戻す</button>
+      <button onclick="clearCurrent()">🚮 マーカーを全削除</button>
+      <button onclick="toggleNumber()">番号ON/OFF</button>
+      <button onclick="toggleExcludeMode()">🚫 矩形除外</button>
+      <button onclick="togglePolygonMode()">🔺 ポリゴン除外</button>
+      <button onclick="testInference()">🤖 自動検出</button>
+      <button onclick="showHistory()">🕘履歴</button>
+
+      <div class="help" id="helpPanel">
+        <b>🚀 クイックスタート</b>
+
+        <br /><br />
+
+        1.「📷写真読込」から写真を選択！
+        <br />
+        ↓
+        <br />
+        2. 必要な場合は除外範囲を設定してみよう
+        <br />
+        ↓
+        <br />
+        3.「🤖自動検出」を押せば、それなりの精度で丸太を検出
+        <br />
+        ↓
+        <br />
+        4. マーカーを追加・移動・削除して修正！！
+        <br />
+        ↓
+        <br />
+        5.「💾プロジェクト保存」で作業内容を保存！
+        <br />
+        ↓
+        <br />
+        6. 必要に応じて「CSV保存」で集計結果も出力可能！
+
+        <hr />
+
+        <b>📖 クイックマニュアル</b>
+
+        <br /><br />
+
+        <b>■ 写真の読み込み</b>
+        <br />
+        ・「📷写真読込」から写真を選択します
+        <br />
+        ・複数の写真をまとめて選択できます
+        <br />
+        ・写真タブをクリックすると、表示する写真を切り替えられます
+        <br />
+        ・写真タブには、各写真の現在の本数が表示されます
+
+        <br /><br />
+
+        <b>■ 自動検出</b>
+        <br />
+        ・「🤖自動検出」で表示中の写真を解析します
+        <br />
+        ・検出信頼度の初期値は20%です
+        <br />
+        ・重なり許容度の初期値は0.30です
+        <br />
+        ・同じ丸太に複数のマーカーが付く場合は、重なり許容度を下げて再度検出してください
+        <br />
+        ・誤検出が多い場合は、検出信頼度を上げて再度検出してください
+        <br />
+        ・自動検出をやり直すと、表示中の写真のマーカーは新しい結果へ置き換わります
+
+        <br /><br />
+
+        <b>■ マーカー操作</b>
+        <br />
+        ・左クリックでマーカーを追加します
+        <br />
+        ・マーカーを長押ししてドラッグすると移動できます
+        <br />
+        ・マーカーを右クリックすると削除できます
+        <br />
+        ・「↩元に戻す」で直前の操作を取り消せます
+        <br />
+        ・「🚮マーカーを全削除」で表示中写真のマーカーをすべて削除できます
+        <br />
+        ・番号表示、マーカーサイズ、番号サイズ、色を変更できます
+
+        <br /><br />
+
+        <b>■ 除外範囲</b>
+        <br />
+        ・「🚫矩形除外」を押し、写真上をドラッグすると矩形を作成できます
+        <br />
+        ・矩形除外モード中に除外範囲を右クリックすると削除できます
+        <br />
+        ・「🔺ポリゴン除外」を押し、左クリックで頂点を3点以上追加します
+        <br />
+        ・ダブルクリックするとポリゴンを確定できます
+        <br />
+        ・ポリゴン除外モード中にポリゴン内を右クリックすると削除できます
+        <br />
+        ・除外範囲内は自動検出の対象外だヨ
+
+        <br /><br />
+
+        <b>■ 表示操作・比較画像</b>
+        <br />
+        ・Ctrlキーを押しながらマウスホイールを回すと拡大・縮小できます
+        <br />
+        ・現在表示していない写真タブを右クリックすると比較画像を表示できます
+        <br />
+        ・比較画像には、対象写真に設定した除外範囲も表示されます
+        <br />
+        ・比較画像は拡大・縮小、画像移動、ウインドウ移動、サイズ変更ができます
+
+        <br /><br />
+
+        <b>■ プロジェクト保存・読込</b>
+        <br />
+        ・「💾プロジェクト保存」を押し、案件メモを入力します
+        <br />
+        ・メモは空欄でも保存できちゃうよ
+        <br />
+        ・保存先とファイル名を指定し、「.omc」ファイルとして保存します（独自の拡張子。Original
+        Maruta Counterの略っぽい）
+        <br />
+        ・写真、マーカー、除外範囲、検出設定がまとめて保存されます
+        <br />
+        ・「📂プロジェクト読込」から保存済みの「.omc」を開けます
+
+        <br /><br />
+
+        <b>■ 履歴</b>
+        <br />
+        ・「🕘履歴」で保存済みプロジェクトの履歴を表示できます
+        <br />
+        ・サムネイル、検出本数、保存日時、案件メモが表示されます
+        <br />
+        ・「開く」でプロジェクトを復元できます
+        <br />
+        ・「🗑削除」で個別に削除できます
+        <br />
+        ・チェックボックスで複数選択し、まとめて削除できます
+        <br />
+        ・履歴は最新30件まで保存されます
+        <br />
+        ・31件目以降は、古い履歴から自動的に削除されます
+        <br />
+        ・履歴を削除しても、PCへ保存した「.omc」ファイルは削除されません
+
+        <br /><br />
+
+        <b>■ CSV保存</b>
+        <br />
+        ・「CSV保存」で写真ごとの本数と合計本数を保存できます
+        <br />
+        ・CSVファイルは表計算ソフトなどで開くことができます
+
+        <br /><br />
+
+        <b>■ データ保管について</b>
+        <br />
+        ・重要な案件は、履歴だけに頼らず「.omc」ファイルを保管してください
+        <br />
+        ・ブラウザデータを削除すると、履歴も消える可能性があります
+      </div>
+      <br />
+      <div id="tabs"></div>
+      <br />塗り:<button
+        id="f_transparent"
+        class="colorbtn"
+        onclick="setFill('transparent')"
+      >
+        透明</button
+      ><button id="f_white" class="colorbtn" onclick="setFill('white')">
+        白</button
+      ><button id="f_black" class="colorbtn" onclick="setFill('black')">
+        黒</button
+      ><button id="f_red" class="colorbtn" onclick="setFill('red')">赤</button
+      ><button id="f_blue" class="colorbtn active" onclick="setFill('blue')">
+        青</button
+      ><br />枠:<button
+        id="b_white"
+        class="colorbtn"
+        onclick="setBorder('white')"
+      >
+        白</button
+      ><button id="b_black" class="colorbtn" onclick="setBorder('black')">
+        黒</button
+      ><button id="b_red" class="colorbtn" onclick="setBorder('red')">赤</button
+      ><button id="b_blue" class="colorbtn active" onclick="setBorder('blue')">
+        青</button
+      ><br />
+      マーカーサイズ
+      <input type="range" id="msize" min="5" max="60" value="15" />
+      検出信頼度
+      <input type="range" id="confThreshold" min="10" max="90" value="20" />
+      <span id="confLabel">20%</span>
+      重なり許容度
+      <input type="range" id="nms" min="10" max="90" value="30" />
+      <span id="nmsLabel">0.30</span>
+      番号サイズ<input
+        type="range"
+        id="nsize"
+        min="20"
+        max="80"
+        value="40"
+        oninput="draw()"
+      />
+      <span id="zoom">倍率:100%</span>
+      <div id="photoCount">この写真:0本</div>
+      <div id="count">全写真合計:0本</div>
+      <div class="help">
+        左クリック=追加 / 長押しドラッグ=移動 / 右クリック=削除 /
+        Ctrl+ホイール=ズーム
+      </div>
+    </div>
+    <div id="compareWindow">
+      <div id="compareHeader">
+        <span id="compareTitle"> 比較画像 </span>
+        <button onclick="closeCompare()">✕</button>
+      </div>
+      <img id="compareImg" />
+      <div id="resizeHandle"></div>
+    </div>
+    <div id="historyWindow">
+      <div id="historyHeader">
+        <span>📋 履歴</span>
+
+        <button onclick="closeHistory()">✕</button>
+      </div>
+
+      <div id="historyContent"></div>
+
+      <div id="historyResizeHandle"></div>
+    </div>
+    <div id="mobileHelpWindow">
+      <div id="mobileHelpHeader">
+        <span>❓ スマホ版 かんたん操作</span>
+
+        <button type="button" onclick="closeMobileHelp()">✕</button>
+      </div>
+
+      <div id="mobileHelpContent">
+        <div class="mobileHelpSection">
+          <b>🚀 基本の流れ</b>
+
+          1. 端末を横向きにします
+          <br />
+          2.「📂読込」で写真を選択します
+          <br />
+          3. 必要な場合は「🚫除外」で除外範囲を設定します
+          <br />
+          4.「🤖検出」で丸太を自動検出します
+          <br />
+          5. マーカーを追加・削除して結果を修正します
+          <br />
+          6.「💾保存」でプロジェクトを保存します
+        </div>
+
+        <div class="mobileHelpSection">
+          <b>✏ マーカー操作</b>
+
+          写真をタップすると、マーカーを追加できます。
+          <br />
+          削除したいマーカーを長押しすると、マーカーを削除できます。
+          <br />
+          スマホ版ではマーカーの移動はできません。
+        </div>
+
+        <div class="mobileHelpSection">
+          <b>🚫 除外範囲</b>
+
+          「🚫除外」を押し、写真上をタップして頂点を3点以上追加します。
+          <br />
+          「✅確定」で除外範囲を確定します。
+          <br />
+          「❌取消」で入力中の頂点を取り消せます。
+          <br />
+          「🔙終了」で通常操作へ戻ります。
+        </div>
+
+        <div class="mobileHelpSection">
+          <b>⚙ 設定</b>
+
+          左上の「⚙」から、次の設定を変更できます。
+          <br />
+          ・塗り色
+          <br />
+          ・枠色
+          <br />
+          ・マーカーサイズ
+          <br />
+          ・番号サイズ
+          <br />
+          ・重なり許容度
+          <br />
+          ・検出信頼度
+          <br />
+          ・番号表示
+          <br /><br />
+          初期設定は、検出信頼度20%、重なり許容度0.30です。
+        </div>
+
+        <div class="mobileHelpSection">
+          <b>🕘 履歴</b>
+
+          左上の「⚙」から「🕘履歴」を開けます。
+          <br />
+          履歴から案件を開く、個別削除、複数選択削除ができます。
+          <br />
+          履歴は最新30件まで保存されます。
+          <br />
+          31件目以降は、古い履歴から自動的に削除されます。
+        </div>
+
+        <div class="mobileHelpSection">
+          <b>💻 PCへ転送する場合</b>
+
+          スマホに保存された「.omc」ファイルを、職場指定のPrimeDriveへアップロードしてください。
+          <br /><br />
+          PCで期限内にダウンロードし、PC版の「📂プロジェクト読込」から開いてください。
+        </div>
+
+        <div class="mobileHelpNote">
+          PrimeDriveはファイル転送用です。
+          必要なプロジェクトは、PC側の所定の保存場所で保管してください。
+        </div>
+      </div>
+    </div>
+    <div id="memoDialog">
+      <div id="memoDialogBox">
+        <h3>💾 プロジェクト保存</h3>
+
+        <label for="projectMemo"> 案件メモ </label>
+
+        <textarea
+          id="projectMemo"
+          placeholder="例：土場名_椪番号_20260805"
+        ></textarea>
+
+        <div id="memoDialogButtons">
+          <button type="button" onclick="cancelProjectSave()">
+            キャンセル
+          </button>
+
+          <button type="button" onclick="confirmProjectSave()">保存</button>
+        </div>
+      </div>
+    </div>
+    <canvas id="cv"></canvas>
+    <div id="mobileToolbar">
+      <div id="normalBar">
+        <button onclick="prevPhoto()">⬅️</button>
+        <button onclick="mobileOpenFile()">
+          📂<br />
+          読込
+        </button>
+        <button onclick="testInference()">
+          🤖<br />
+          検出
+        </button>
+        <button onclick="startPolygonMode()">
+          🚫<br />
+          除外
+        </button>
+        <button onclick="saveProject()">
+          💾<br />
+          保存
+        </button>
+        <button onclick="nextPhoto()">➡️</button>
+      </div>
+      <div id="polygonBar" style="display: none">
+        <button onclick="finishPolygon()">
+          ✅<br />
+          確定
+        </button>
+        <button onclick="cancelPolygon()">
+          ❌<br />
+          取消
+        </button>
+        <button onclick="exitPolygonMode()">
+          🔙<br />
+          終了
+        </button>
+      </div>
+    </div>
+    <script>
+      const cv = document.getElementById("cv"),
+        ctx = cv.getContext("2d");
+
+      const statusElm = document.getElementById("status");
+
+      const compareWindow = document.getElementById("compareWindow");
+
+      const historyWindow = document.getElementById("historyWindow");
+      const historyHeader = document.getElementById("historyHeader");
+      const historyResizeHandle = document.getElementById(
+        "historyResizeHandle",
+      );
+
+      historyResizeHandle.onmousedown = (e) => {
+        if (isMobile) {
+          return;
+        }
+
+        historyResizing = true;
+
+        historyResizeStartX = e.clientX;
+
+        historyResizeStartY = e.clientY;
+
+        historyStartWidth = historyWindow.offsetWidth;
+
+        historyStartHeight = historyWindow.offsetHeight;
+      };
+
+      const compareHeader = document.getElementById("compareHeader");
+
+      const resizeHandle = document.getElementById("resizeHandle");
+      let photos = [],
+        current = 0,
+        img = new Image(),
+        pts = [],
+        scale = 1,
+        fillColor = "blue",
+        borderColor = "blue",
+        drag = -1,
+        selected = -1,
+        holdTimer = null,
+        moved = false;
+
+      let selecting = false;
+      let selectStart = null;
+      let selectEnd = null;
+      let excludeMode = false;
+      let excludeRects = [];
+
+      let polygonMode = false;
+      let currentPolygon = [];
+      let excludePolygons = [];
+
+      let showNumber = true;
+      let history = [];
+
+      const MAX_PROJECTS = 30;
+
+      const selectedProjectIds = new Set();
+
+      let compareDrag = false;
+      let compareOffsetX = 0;
+      let compareOffsetY = 0;
+
+      let historyDrag = false;
+      let historyOffsetX = 0;
+      let historyOffsetY = 0;
+
+      let resizing = false;
+      let resizeStartX = 0;
+      let resizeStartY = 0;
+      let startWidth = 0;
+      let startHeight = 0;
+
+      let historyResizing = false;
+      let historyResizeStartX = 0;
+      let historyResizeStartY = 0;
+      let historyStartWidth = 0;
+      let historyStartHeight = 0;
+
+      let compareScale = 1;
+      let compareX = 0;
+      let compareY = 0;
+      const isMobile = window.matchMedia("(pointer: coarse)").matches;
+      let mobileMode = "normal";
+      let compareImgDrag = false;
+      let compareImgStartX = 0;
+      let compareImgStartY = 0;
+
+      function showMsg(text) {
+        statusElm.textContent = text;
+
+        statusElm.style.display = "block";
+      }
+      function hideMsg() {
+        statusElm.style.display = "none";
+      }
+      function checkOrientation() {
+        const notice = document.getElementById("rotateNotice");
+        if (isMobile && window.innerHeight > window.innerWidth) {
+          notice.style.display = "flex";
+        } else {
+          notice.style.display = "none";
+        }
+      }
+      function mobileSettings() {
+        const panel = document.getElementById("mobileSettingsPanel");
+        panel.style.display =
+          panel.style.display === "block" ? "none" : "block";
+      }
+      function closeMobileSettings() {
+        document.getElementById("mobileSettingsPanel").style.display = "none";
+      }
+      async function openMobileHistory() {
+        closeMobileSettings();
+
+        await showHistory();
+      }
+      function openMobileHelp() {
+        closeMobileSettings();
+
+        document.getElementById("mobileHelpWindow").style.display = "block";
+      }
+
+      function closeMobileHelp() {
+        document.getElementById("mobileHelpWindow").style.display = "none";
+      }
+      function mobileOpenFile() {
+        document.getElementById("file").click();
+      }
+      function setMobileMode(mode) {
+        mobileMode = mode;
+        document.getElementById("normalBar").style.display =
+          mode === "normal" ? "flex" : "none";
+        document.getElementById("polygonBar").style.display =
+          mode === "polygon" ? "flex" : "none";
+      }
+      function setFill(c) {
+        fillColor = c;
+        document
+          .querySelectorAll("[id^=f_]")
+          .forEach((x) => x.classList.remove("active"));
+        document.getElementById("f_" + c).classList.add("active");
+      }
+      function setBorder(c) {
+        borderColor = c;
+        document
+          .querySelectorAll("[id^=b_]")
+          .forEach((x) => x.classList.remove("active"));
+        document.getElementById("b_" + c).classList.add("active");
+      }
+      function mobileSetFill(color) {
+        setFill(color);
+        document
+          .querySelectorAll("[id^=mf_]")
+          .forEach((x) => x.classList.remove("active"));
+        document.getElementById("mf_" + color).classList.add("active");
+      }
+      function mobileSetBorder(color) {
+        setBorder(color);
+        document
+          .querySelectorAll("[id^=mb_]")
+          .forEach((x) => x.classList.remove("active"));
+        document.getElementById("mb_" + color).classList.add("active");
+      }
+      mobileMsize.oninput = () => {
+        msize.value = mobileMsize.value;
+        msize.oninput();
+      };
+      mobileNsize.oninput = () => {
+        nsize.value = mobileNsize.value;
+        draw();
+      };
+      mobileNms.oninput = () => {
+        nms.value = mobileNms.value;
+        updateNmsLabel();
+      };
+      mobileConfThreshold.oninput = () => {
+        confThreshold.value = mobileConfThreshold.value;
+        updateConfLabel();
+      };
+      function toggleNumber() {
+        showNumber = !showNumber;
+        draw();
+      }
+      function toggleExcludeMode() {
+        excludeMode = !excludeMode;
+        if (excludeMode) {
+          polygonMode = false;
+        }
+        showMsg(excludeMode ? "🚫 除外エリアモード" : "通常モード");
+      }
+      function togglePolygonMode() {
+        polygonMode = !polygonMode;
+        if (polygonMode) {
+          excludeMode = false;
+        }
+        setMobileMode(polygonMode ? "polygon" : "normal");
+        if (polygonMode) {
+          currentPolygon = [];
+        }
+        showMsg(polygonMode ? "🔺 ポリゴン除外モード" : "通常モード");
+      }
+      function startPolygonMode() {
+        polygonMode = true;
+        excludeMode = false;
+        currentPolygon = [];
+        setMobileMode("polygon");
+        showMsg("🔺 ポリゴン除外モード");
+        draw();
+      }
+      function finishPolygon() {
+        if (currentPolygon.length < 3) {
+          alert("頂点を3つ以上追加してください");
+          return;
+        }
+        photos[current].excludePolygons.push([...currentPolygon]);
+        excludePolygons = photos[current].excludePolygons;
+        currentPolygon = [];
+        draw();
+        showMsg("✅ ポリゴン追加");
+      }
+      function cancelPolygon() {
+        currentPolygon = [];
+        draw();
+      }
+      function exitPolygonMode() {
+        currentPolygon = [];
+        polygonMode = false;
+        setMobileMode("normal");
+        showMsg("通常モード");
+        draw();
+      }
+      function toggleHelp() {
+        const panel = document.getElementById("helpPanel");
+        if (getComputedStyle(panel).display === "none") {
+          panel.style.display = "block";
+        } else {
+          panel.style.display = "none";
+        }
+      }
+      resizeHandle.onmousedown = (e) => {
+        resizing = true;
+        resizeStartX = e.clientX;
+        resizeStartY = e.clientY;
+        startWidth = compareWindow.offsetWidth;
+        startHeight = compareWindow.offsetHeight;
+      };
+      const compareImg = document.getElementById("compareImg");
+      compareHeader.onmousedown = (e) => {
+        compareDrag = true;
+        compareOffsetX = e.clientX - compareWindow.offsetLeft;
+        compareOffsetY = e.clientY - compareWindow.offsetTop;
+      };
+      historyHeader.onmousedown = (e) => {
+        if (isMobile) {
+          return;
+        }
+
+        historyDrag = true;
+
+        historyOffsetX = e.clientX - historyWindow.offsetLeft;
+
+        historyOffsetY = e.clientY - historyWindow.offsetTop;
+      };
+      function openCompare(i) {
+        const win = document.getElementById("compareWindow");
+        const imgElm = document.getElementById("compareImg");
+        const title = document.getElementById("compareTitle");
+        const c = document.createElement("canvas");
+        c.width = photos[i].img.width;
+        c.height = photos[i].img.height;
+        const x = c.getContext("2d");
+        x.drawImage(photos[i].img, 0, 0);
+        photos[i].excludeRects.forEach((r) => {
+          x.fillStyle = "rgba(255,0,0,0.35)";
+          x.fillRect(r.x, r.y, r.w, r.h);
+          x.strokeStyle = "red";
+          x.lineWidth = 3;
+          x.strokeRect(r.x, r.y, r.w, r.h);
+        });
+        photos[i].excludePolygons.forEach((poly) => {
+          x.beginPath();
+          x.moveTo(poly[0].x, poly[0].y);
+          for (let j = 1; j < poly.length; j++) {
+            x.lineTo(poly[j].x, poly[j].y);
+          }
+          x.closePath();
+          x.fillStyle = "rgba(255,0,0,0.35)";
+          x.fill();
+          x.strokeStyle = "red";
+          x.lineWidth = 3;
+          x.stroke();
+        });
+        imgElm.src = c.toDataURL();
+        title.textContent = photos[i].name;
+        compareScale = 1;
+        compareX = 0;
+        compareY = 0;
+        updateCompareView();
+        win.style.display = "block";
+      }
+      function closeCompare() {
+        document.getElementById("compareWindow").style.display = "none";
+      }
+      compareImg.addEventListener(
+        "wheel",
+        (e) => {
+          e.preventDefault();
+          compareScale *= e.deltaY < 0 ? 1.1 : 0.9;
+          compareScale = Math.max(0.2, Math.min(10, compareScale));
+          updateCompareView();
+        },
+        {
+          passive: false,
+        },
+      );
+      function closeHistory() {
+        selectedProjectIds.clear();
+
+        document.getElementById("historyWindow").style.display = "none";
+      }
+      function updateCompareView() {
+        compareImg.style.transform = `translate(${compareX}px, ${compareY}px)
+                      scale(${compareScale})`;
+      }
+      compareImg.addEventListener("pointerdown", (e) => {
+        compareImgDrag = true;
+        compareImgStartX = e.clientX;
+        compareImgStartY = e.clientY;
+        compareImg.style.cursor = "grabbing";
+        compareImg.setPointerCapture(e.pointerId);
+      });
+      compareImg.addEventListener("pointerup", () => {
+        compareImgDrag = false;
+        compareImg.style.cursor = "grab";
+      });
+      compareImg.addEventListener("pointercancel", () => {
+        compareImgDrag = false;
+        compareImg.style.cursor = "grab";
+      });
+      function updateConfLabel() {
+        confLabel.textContent = confThreshold.value + "%";
+      }
+      function updateNmsLabel() {
+        nmsLabel.textContent = (nms.value / 100).toFixed(2);
+      }
+      msize.oninput = () => {
+        photos[current].pts.forEach((p) => {
+          p.size = +msize.value;
+        });
+        pts = photos[current].pts;
+        draw();
+      };
+      async function loadPhotos(e) {
+        photos = [];
+        for (const f of [...e.target.files]) {
+          const im = new Image();
+          await new Promise((r) => {
+            im.onload = r;
+            im.src = URL.createObjectURL(f);
+          });
+          photos.push({
+            name: f.name,
+            img: im,
+            pts: [],
+            excludeRects: [],
+            excludePolygons: [],
+          });
+        }
+        renderTabs();
+        if (photos.length) switchTab(0);
+      }
+      function renderTabs() {
+        tabs.innerHTML = "";
+
+        photos.forEach((p, i) => {
+          let b = document.createElement("button");
+
+          if (i === current) {
+            b.textContent = "▶ " + p.name + " (" + p.pts.length + ")";
+
+            b.style.backgroundColor = "#ff9800";
+            b.style.color = "white";
+            b.style.fontWeight = "bold";
+            b.style.border = "3px solid red";
+            b.style.fontSize = "16px";
+            b.style.padding = "6px 12px";
+          } else {
+            b.textContent = p.name + " (" + p.pts.length + ")";
+
+            b.style.backgroundColor = "#f5f5f5";
+            b.style.color = "black";
+            b.style.fontWeight = "normal";
+            b.style.border = "1px solid #999";
+            b.style.padding = "4px 8px";
+          }
+
+          b.onclick = () => switchTab(i);
+          b.oncontextmenu = (e) => {
+            e.preventDefault();
+            if (i === current) {
+              return;
+            }
+            openCompare(i);
+          };
+
+          tabs.appendChild(b);
+        });
+      }
+      function switchTab(i) {
+        current = i;
+        img = photos[i].img;
+        pts = photos[i].pts;
+        excludeRects = photos[i].excludeRects;
+        excludePolygons = photos[i].excludePolygons;
+        cv.width = img.width;
+        cv.height = img.height;
+        if (isMobile) {
+          document.getElementById("photoIndex").textContent =
+            "📷 " + (current + 1) + " / " + photos.length;
+        }
+        draw();
+      }
+      function prevPhoto() {
+        if (current > 0) {
+          switchTab(current - 1);
+        }
+      }
+      function nextPhoto() {
+        if (current < photos.length - 1) {
+          switchTab(current + 1);
+        }
+      }
+      function draw() {
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(0, 0, cv.width, cv.height);
+        ctx.save();
+        ctx.scale(scale, scale);
+        if (img.src) ctx.drawImage(img, 0, 0);
+        let ns = +nsize.value;
+        pts.forEach((p, i) => {
+          ctx.strokeStyle = i === selected ? "orange" : p.border;
+          ctx.lineWidth = i === selected ? 6 : 3;
+          ctx.fillStyle = p.fill === "transparent" ? "rgba(0,0,0,0)" : p.fill;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+          ctx.font = "bold " + ns + "px Arial";
+          ctx.strokeStyle = "white";
+          ctx.lineWidth = 5;
+          if (showNumber) {
+            ctx.strokeText(i + 1, p.x + 18, p.y);
+            ctx.fillStyle = "black";
+            ctx.fillText(i + 1, p.x + 18, p.y);
+          }
+        });
+
+        excludeRects.forEach((r) => {
+          ctx.fillStyle = "rgba(0,0,0,0.35)";
+          ctx.fillRect(r.x, r.y, r.w, r.h);
+          ctx.strokeStyle = "red";
+          ctx.lineWidth = 2;
+          ctx.strokeRect(r.x, r.y, r.w, r.h);
+        });
+        excludePolygons.forEach((poly) => {
+          ctx.fillStyle = "rgba(0,0,0,0.35)";
+          ctx.strokeStyle = "red";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(poly[0].x, poly[0].y);
+          for (let i = 1; i < poly.length; i++) {
+            ctx.lineTo(poly[i].x, poly[i].y);
+          }
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+        });
+        if (currentPolygon.length > 0) {
+          ctx.strokeStyle = "lime";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(currentPolygon[0].x, currentPolygon[0].y);
+          for (let i = 1; i < currentPolygon.length; i++) {
+            ctx.lineTo(currentPolygon[i].x, currentPolygon[i].y);
+          }
+          ctx.stroke();
+          currentPolygon.forEach((p) => {
+            ctx.fillStyle = "yellow";
+            ctx.strokeStyle = "black";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, 10, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+          });
+        }
+        if (excludeMode && selecting && selectStart && selectEnd) {
+          ctx.strokeStyle = "lime";
+          ctx.lineWidth = 5;
+          ctx.setLineDash([10, 5]);
+          ctx.strokeRect(
+            selectStart.x,
+            selectStart.y,
+            selectEnd.x - selectStart.x,
+            selectEnd.y - selectStart.y,
+          );
+          ctx.setLineDash([]);
+        }
+        ctx.restore();
+        photoCount.textContent = "この写真:" + pts.length + "本";
+
+        count.textContent =
+          "全写真合計:" + photos.reduce((s, p) => s + p.pts.length, 0) + "本";
+        if (isMobile) {
+          const total = photos.reduce((s, p) => s + p.pts.length, 0);
+          document.getElementById("photoIndex").textContent =
+            "📷 " +
+            (current + 1) +
+            " / " +
+            photos.length +
+            "　この写真：" +
+            pts.length +
+            "本　総計：" +
+            total +
+            "本";
+        }
+
+        zoom.textContent = "倍率:" + Math.round(scale * 100) + "%";
+
+        renderTabs();
+      }
+      function pos(e) {
+        let r = cv.getBoundingClientRect();
+        return {
+          x: ((e.clientX - r.left) * (cv.width / r.width)) / scale,
+          y: ((e.clientY - r.top) * (cv.height / r.height)) / scale,
+        };
+      }
+      function nearest(p) {
+        let idx = -1,
+          b = 1e9;
+        pts.forEach((q, i) => {
+          let d = (q.x - p.x) ** 2 + (q.y - p.y) ** 2;
+          if (d < b) {
+            b = d;
+            idx = i;
+          }
+        });
+        return { idx, dist: b };
+      }
+      function pointInPolygon(point, polygon) {
+        let inside = false;
+        for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+          const xi = polygon[i].x;
+          const yi = polygon[i].y;
+          const xj = polygon[j].x;
+          const yj = polygon[j].y;
+          const intersect =
+            yi > point.y !== yj > point.y &&
+            point.x < ((xj - xi) * (point.y - yi)) / (yj - yi) + xi;
+          if (intersect) {
+            inside = !inside;
+          }
+        }
+        return inside;
+      }
+      cv.onmousedown = (e) => {
+        if (polygonMode && e.button === 0) {
+          currentPolygon.push(pos(e));
+          draw();
+          return;
+        }
+        if (excludeMode && e.button === 0) {
+          selecting = true;
+          selectStart = pos(e);
+          selectEnd = pos(e);
+          return;
+        }
+        if (!photos.length) return;
+        let n = nearest(pos(e));
+        holdTimer = setTimeout(() => {
+          if (n.idx >= 0 && n.dist < 5000) {
+            drag = n.idx;
+            selected = n.idx;
+          }
+        }, 400);
+      };
+      cv.onmouseup = (e) => {
+        if (polygonMode) {
+          return;
+        }
+        if (excludeMode && selecting && e.button === 0) {
+          selecting = false;
+          excludeRects.push({
+            x: Math.min(selectStart.x, selectEnd.x),
+            y: Math.min(selectStart.y, selectEnd.y),
+            w: Math.abs(selectEnd.x - selectStart.x),
+            h: Math.abs(selectEnd.y - selectStart.y),
+          });
+
+          photos[current].excludeRects = excludeRects;
+
+          draw();
+          return;
+        }
+        clearTimeout(holdTimer);
+
+        // 右クリックは追加しない
+        if (e.button === 2) {
+          return;
+        }
+
+        if (drag >= 0) {
+          drag = -1;
+          draw();
+          return;
+        }
+
+        if (moved) {
+          moved = false;
+          return;
+        }
+
+        history.push(JSON.stringify(pts));
+
+        pts.push({
+          ...pos(e),
+
+          size: +msize.value,
+
+          fill: fillColor,
+
+          border: borderColor,
+        });
+
+        selected = pts.length - 1;
+
+        draw();
+      };
+      window.onmousemove = (e) => {
+        if (compareImgDrag) {
+          compareX += e.clientX - compareImgStartX;
+          compareY += e.clientY - compareImgStartY;
+          compareImgStartX = e.clientX;
+          compareImgStartY = e.clientY;
+          updateCompareView();
+        }
+        if (resizing) {
+          compareWindow.style.width =
+            Math.max(200, startWidth + (e.clientX - resizeStartX)) + "px";
+          compareWindow.style.height =
+            Math.max(150, startHeight + (e.clientY - resizeStartY)) + "px";
+        }
+        if (compareDrag) {
+          compareWindow.style.left = e.clientX - compareOffsetX + "px";
+          compareWindow.style.top = e.clientY - compareOffsetY + "px";
+          compareWindow.style.right = "auto";
+        }
+        if (historyDrag) {
+          historyWindow.style.left = e.clientX - historyOffsetX + "px";
+
+          historyWindow.style.top = e.clientY - historyOffsetY + "px";
+        }
+        if (historyResizing) {
+          historyWindow.style.width =
+            Math.max(
+              300,
+              historyStartWidth + (e.clientX - historyResizeStartX),
+            ) + "px";
+
+          historyWindow.style.height =
+            Math.max(
+              300,
+              historyStartHeight + (e.clientY - historyResizeStartY),
+            ) + "px";
+        }
+        if (excludeMode && selecting) {
+          selectEnd = pos(e);
+          draw();
+          return;
+        }
+        if (drag >= 0) {
+          Object.assign(pts[drag], pos(e));
+          draw();
+        }
+      };
+      window.onmouseup = () => {
+        resizing = false;
+
+        compareDrag = false;
+
+        historyDrag = false;
+
+        historyResizing = false;
+      };
+      cv.oncontextmenu = (e) => {
+        e.preventDefault();
+        const p = pos(e);
+        if (polygonMode) {
+          for (let i = excludePolygons.length - 1; i >= 0; i--) {
+            const poly = excludePolygons[i];
+            if (pointInPolygon(p, poly)) {
+              excludePolygons.splice(i, 1);
+              photos[current].excludePolygons = excludePolygons;
+              draw();
+              return;
+            }
+          }
+          return;
+        }
+        if (excludeMode) {
+          for (let i = excludeRects.length - 1; i >= 0; i--) {
+            const r = excludeRects[i];
+            if (
+              p.x >= r.x &&
+              p.x <= r.x + r.w &&
+              p.y >= r.y &&
+              p.y <= r.y + r.h
+            ) {
+              excludeRects.splice(i, 1);
+              photos[current].excludeRects = excludeRects;
+              draw();
+              return;
+            }
+          }
+          return;
+        }
+        let n = nearest(p);
+        if (n.idx >= 0) {
+          history.push(JSON.stringify(pts));
+          pts.splice(n.idx, 1);
+          draw();
+        }
+      };
+      cv.addEventListener(
+        "wheel",
+        (e) => {
+          if (!e.ctrlKey) return;
+          e.preventDefault();
+          scale = Math.max(
+            0.2,
+            Math.min(5, scale * (e.deltaY < 0 ? 1.1 : 0.9)),
+          );
+          draw();
+        },
+        { passive: false },
+      );
+      cv.ondblclick = () => {
+        if (!isMobile && polygonMode) {
+          finishPolygon();
+          return;
+        }
+        scale = 1;
+        draw();
+      };
+      async function saveBlob(blob, name) {
+        if (window.showSaveFilePicker) {
+          const h = await showSaveFilePicker({ suggestedName: name });
+          const w = await h.createWritable();
+          await w.write(blob);
+          await w.close();
+        } else {
+          const a = document.createElement("a");
+          a.href = URL.createObjectURL(blob);
+          a.download = name;
+          a.click();
+        }
+      }
+      function saveProject() {
+        if (photos.length === 0) {
+          alert("先に写真を読み込んでください");
+
+          return;
+        }
+
+        const memoDialog = document.getElementById("memoDialog");
+
+        const projectMemo = document.getElementById("projectMemo");
+
+        projectMemo.value = "";
+
+        memoDialog.style.display = "flex";
+
+        setTimeout(() => {
+          projectMemo.focus();
+        }, 0);
+      }
+
+      function cancelProjectSave() {
+        const memoDialog = document.getElementById("memoDialog");
+
+        memoDialog.style.display = "none";
+      }
+      async function confirmProjectSave() {
+        const projectMemo = document.getElementById("projectMemo");
+
+        const memo = projectMemo.value.trim();
+
+        let fileHandle = null;
+
+        if (window.showSaveFilePicker) {
+          try {
+            fileHandle = await window.showSaveFilePicker({
+              suggestedName: "project.omc",
+
+              types: [
+                {
+                  description: "マルタ・カゾエール プロジェクト",
+
+                  accept: {
+                    "application/json": [".omc"],
+                  },
+                },
+              ],
+            });
+          } catch (error) {
+            if (error.name === "AbortError") {
+              showMsg("プロジェクト保存をキャンセルしました");
+
+              return;
+            }
+
+            console.error("保存先の選択に失敗しました", error);
+
+            showMsg("❌ 保存先を選択できませんでした");
+
+            return;
+          }
+        }
+
+        const memoDialog = document.getElementById("memoDialog");
+
+        memoDialog.style.display = "none";
+
+        try {
+          const thumbCanvas = document.createElement("canvas");
+
+          thumbCanvas.width = 200;
+          thumbCanvas.height = 150;
+
+          const thumbContext = thumbCanvas.getContext("2d");
+
+          thumbContext.drawImage(photos[0].img, 0, 0, 200, 150);
+
+          const thumbnail = thumbCanvas.toDataURL("image/jpeg", 0.7);
+
+          const savePhotos = photos.map((photo) => {
+            const canvas = document.createElement("canvas");
+
+            canvas.width = photo.img.width;
+
+            canvas.height = photo.img.height;
+
+            const canvasContext = canvas.getContext("2d");
+
+            canvasContext.drawImage(photo.img, 0, 0);
+
+            return {
+              name: photo.name,
+
+              imageData: canvas.toDataURL("image/jpeg", 0.85),
+
+              pts: photo.pts,
+
+              excludeRects: photo.excludeRects,
+
+              excludePolygons: photo.excludePolygons,
+            };
+          });
+
+          const projectData = {
+            thumbnail,
+            memo,
+
+            createdAt: new Date().toLocaleString("ja-JP", {
+              year: "numeric",
+              month: "2-digit",
+              day: "2-digit",
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
+
+            confidence: confThreshold.value,
+
+            nms: nms.value,
+
+            totalCount: photos.reduce(
+              (sum, photo) => sum + photo.pts.length,
+              0,
+            ),
+
+            photos: savePhotos,
+          };
+
+          const json = JSON.stringify(projectData);
+
+          const blob = new Blob([json], {
+            type: "application/json",
+          });
+
+          if (fileHandle) {
+            const writable = await fileHandle.createWritable();
+
+            await writable.write(blob);
+
+            await writable.close();
+          } else {
+            const downloadUrl = URL.createObjectURL(blob);
+
+            const downloadLink = document.createElement("a");
+
+            downloadLink.href = downloadUrl;
+
+            downloadLink.download = "project.omc";
+
+            document.body.appendChild(downloadLink);
+
+            downloadLink.click();
+
+            downloadLink.remove();
+
+            setTimeout(() => {
+              URL.revokeObjectURL(downloadUrl);
+            }, 1000);
+          }
+
+          await saveProjectToDB(projectData);
+
+          try {
+            await enforceProjectLimit();
+          } catch (limitError) {
+            console.warn("履歴件数の整理に失敗しました", limitError);
+          }
+
+          showMsg("✅ プロジェクト保存完了");
+        } catch (error) {
+          console.error("❌ プロジェクト保存失敗", error);
+
+          showMsg("❌ プロジェクト保存に失敗しました");
+        }
+      }
+      async function restoreProject(projectData) {
+        photos = [];
+        for (const p of projectData.photos) {
+          const im = new Image();
+          await new Promise((resolve) => {
+            im.onload = resolve;
+            im.src = p.imageData;
+          });
+          photos.push({
+            name: p.name,
+            img: im,
+            pts: p.pts,
+            excludeRects: p.excludeRects,
+            excludePolygons: p.excludePolygons,
+          });
+        }
+        confThreshold.value = projectData.confidence;
+        updateConfLabel();
+        nms.value = projectData.nms;
+        updateNmsLabel();
+        renderTabs();
+        if (photos.length) {
+          switchTab(0);
+        }
+      }
+      async function loadProject(event) {
+        const file = event.target.files[0];
+
+        if (!file) {
+          return;
+        }
+
+        try {
+          const json = await file.text();
+
+          const projectData = JSON.parse(json);
+
+          if (!projectData || !Array.isArray(projectData.photos)) {
+            throw new Error("プロジェクト形式ではありません");
+          }
+
+          await restoreProject(projectData);
+
+          showMsg("✅ プロジェクト読込完了");
+        } catch (error) {
+          console.error("❌ プロジェクト読込失敗", error);
+
+          alert("このファイルは有効なプロジェクトファイルではありません。");
+
+          showMsg("❌ プロジェクトを読み込めませんでした");
+        } finally {
+          event.target.value = "";
+        }
+      }
+      async function loadHistory(index) {
+        const historyList = await getProjectHistory();
+
+        await restoreProject(historyList[index]);
+
+        showMsg("✅ 履歴読込完了");
+      }
+      async function exportCSV() {
+        let rows = ["画像名,本数"];
+        let total = 0;
+        photos.forEach((p) => {
+          rows.push(p.name + "," + p.pts.length);
+          total += p.pts.length;
+        });
+        rows.push("合計," + total);
+        const blob = new Blob(["\ufeff" + rows.join("\r\n")], {
+          type: "text/csv;charset=utf-8",
+        });
+        await saveBlob(blob, "log_count.csv");
+        showMsg("CSV保存が完了しました。");
+      }
+      function undoLast() {
+        if (history.length === 0) {
+          return;
+        }
+
+        pts = JSON.parse(history.pop());
+
+        photos[current].pts = pts;
+
+        draw();
+      }
+      function clearCurrent() {
+        if (!confirm("この写真のマーカーを全削除しますか？")) {
+          return;
+        }
+
+        history.push(JSON.stringify(pts));
+
+        pts = [];
+
+        photos[current].pts = pts;
+
+        draw();
+      }
+      let session = null;
+
+      let db = null;
+      async function openDB() {
+        return new Promise((resolve, reject) => {
+          const request = indexedDB.open("omcDB", 1);
+          request.onupgradeneeded = (e) => {
+            const db = e.target.result;
+
+            if (!db.objectStoreNames.contains("projects")) {
+              db.createObjectStore("projects", {
+                keyPath: "id",
+                autoIncrement: true,
+              });
+            }
+          };
+
+          request.onsuccess = (e) => {
+            db = e.target.result;
+
+            resolve(db);
+          };
+
+          request.onerror = reject;
+        });
+      }
+
+      async function saveProjectToDB(projectData) {
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction(["projects"], "readwrite");
+
+          const store = tx.objectStore("projects");
+
+          store.add(projectData);
+
+          tx.oncomplete = () => resolve();
+
+          tx.onerror = reject;
+        });
+      }
+
+      async function getProjects() {
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction(["projects"], "readonly");
+
+          const store = tx.objectStore("projects");
+
+          const request = store.getAll();
+
+          request.onsuccess = () => resolve(request.result);
+
+          request.onerror = reject;
+        });
+      }
+
+      async function enforceProjectLimit() {
+        return new Promise((resolve, reject) => {
+          const transaction = db.transaction(["projects"], "readwrite");
+
+          const store = transaction.objectStore("projects");
+
+          const keysRequest = store.getAllKeys();
+
+          keysRequest.onsuccess = () => {
+            const projectKeys = keysRequest.result;
+
+            const excessCount = projectKeys.length - MAX_PROJECTS;
+
+            if (excessCount <= 0) {
+              return;
+            }
+
+            const keysToDelete = projectKeys.slice(0, excessCount);
+
+            keysToDelete.forEach((projectId) => {
+              store.delete(projectId);
+            });
+          };
+
+          keysRequest.onerror = () => {
+            reject(keysRequest.error);
+          };
+
+          transaction.oncomplete = () => {
+            resolve();
+          };
+
+          transaction.onerror = () => {
+            reject(transaction.error);
+          };
+
+          transaction.onabort = () => {
+            reject(transaction.error);
+          };
+        });
+      }
+      function formatStorageSize(bytes) {
+        if (bytes === undefined || bytes === null) {
+          return "不明";
+        }
+
+        if (bytes < 1024) {
+          return bytes + " B";
+        }
+
+        const kilobytes = bytes / 1024;
+
+        if (kilobytes < 1024) {
+          return kilobytes.toFixed(1) + " KB";
+        }
+
+        const megabytes = kilobytes / 1024;
+
+        if (megabytes < 1024) {
+          return megabytes.toFixed(1) + " MB";
+        }
+
+        const gigabytes = megabytes / 1024;
+
+        return gigabytes.toFixed(2) + " GB";
+      }
+      async function createHistorySummary(historyCount) {
+        const summary = document.createElement("div");
+
+        summary.style.padding = "10px";
+
+        summary.style.marginBottom = "12px";
+
+        summary.style.background = "#f3f3f3";
+
+        summary.style.border = "1px solid #bbb";
+
+        summary.style.borderRadius = "6px";
+
+        const countLine = document.createElement("div");
+
+        countLine.textContent = `履歴：${historyCount} / ${MAX_PROJECTS}件`;
+
+        countLine.style.fontWeight = "bold";
+
+        summary.appendChild(countLine);
+
+        const storageLine = document.createElement("div");
+
+        storageLine.style.marginTop = "5px";
+
+        if (navigator.storage && navigator.storage.estimate) {
+          try {
+            const estimate = await navigator.storage.estimate();
+
+            const usage = estimate.usage || 0;
+
+            const quota = estimate.quota || 0;
+
+            const usagePercent = quota > 0 ? (usage / quota) * 100 : 0;
+
+            storageLine.textContent =
+              "使用容量：" +
+              formatStorageSize(usage) +
+              " / " +
+              formatStorageSize(quota) +
+              "（" +
+              usagePercent.toFixed(1) +
+              "%）";
+
+            if (usagePercent >= 85) {
+              storageLine.style.color = "#b71c1c";
+
+              storageLine.style.fontWeight = "bold";
+            } else if (usagePercent >= 70) {
+              storageLine.style.color = "#e65100";
+
+              storageLine.style.fontWeight = "bold";
+            }
+          } catch (error) {
+            console.warn("容量情報を取得できませんでした", error);
+
+            storageLine.textContent = "使用容量：取得できません";
+          }
+        } else {
+          storageLine.textContent = "使用容量：このブラウザでは取得できません";
+        }
+
+        summary.appendChild(storageLine);
+
+        return summary;
+      }
+
+      async function deleteProjectFromDB(projectId) {
+        return new Promise((resolve, reject) => {
+          const transaction = db.transaction(["projects"], "readwrite");
+
+          const store = transaction.objectStore("projects");
+
+          store.delete(projectId);
+
+          transaction.oncomplete = () => {
+            resolve();
+          };
+
+          transaction.onerror = () => {
+            reject(transaction.error);
+          };
+
+          transaction.onabort = () => {
+            reject(transaction.error);
+          };
+        });
+      }
+
+      async function deleteProjectsFromDB(projectIds) {
+        return new Promise((resolve, reject) => {
+          const transaction = db.transaction(["projects"], "readwrite");
+
+          const store = transaction.objectStore("projects");
+
+          projectIds.forEach((projectId) => {
+            store.delete(projectId);
+          });
+
+          transaction.oncomplete = () => {
+            resolve();
+          };
+
+          transaction.onerror = () => {
+            reject(transaction.error);
+          };
+
+          transaction.onabort = () => {
+            reject(transaction.error);
+          };
+        });
+      }
+
+      async function deleteHistoryProject(project) {
+        if (!project || project.id === undefined) {
+          alert("削除対象の履歴IDが見つかりません");
+
+          return;
+        }
+
+        const projectInfo = [
+          project.createdAt || "日時不明",
+
+          `${project.totalCount ?? 0}本`,
+
+          project.memo ? `メモ：${project.memo}` : "メモ：なし",
+        ].join("\n");
+
+        const shouldDelete = window.confirm(
+          "この履歴を削除しますか？\n\n" +
+            projectInfo +
+            "\n\nこの操作は取り消せません。",
+        );
+
+        if (!shouldDelete) {
+          return;
+        }
+
+        try {
+          await deleteProjectFromDB(project.id);
+
+          showMsg("✅ 履歴を削除しました");
+
+          await showHistory();
+        } catch (error) {
+          console.error("❌ 履歴削除失敗", error);
+
+          showMsg("❌ 履歴を削除できませんでした");
+        }
+      }
+
+      async function deleteSelectedHistoryProjects() {
+        const selectedIds = Array.from(selectedProjectIds);
+
+        if (selectedIds.length === 0) {
+          return;
+        }
+
+        const shouldDelete = window.confirm(
+          `選択した${selectedIds.length}件の履歴を削除しますか？\n\nこの操作は取り消せません。`,
+        );
+
+        if (!shouldDelete) {
+          return;
+        }
+
+        try {
+          await deleteProjectsFromDB(selectedIds);
+
+          selectedProjectIds.clear();
+
+          showMsg(`✅ ${selectedIds.length}件の履歴を削除しました`);
+
+          await showHistory();
+        } catch (error) {
+          console.error("❌ 履歴の一括削除に失敗しました", error);
+
+          showMsg("❌ 選択した履歴を削除できませんでした");
+        }
+      }
+
+      async function getProjectHistory() {
+        const projects = await getProjects();
+
+        return projects.reverse();
+      }
+
+      function createHistorySelectionBar(historyList) {
+        const selectionBar = document.createElement("div");
+
+        selectionBar.id = "historySelectionBar";
+
+        selectionBar.style.display = "none";
+
+        selectionBar.style.position = "sticky";
+
+        selectionBar.style.top = "0";
+
+        selectionBar.style.zIndex = "20";
+
+        selectionBar.style.boxSizing = "border-box";
+
+        selectionBar.style.width = "100%";
+
+        selectionBar.style.padding = "10px";
+
+        selectionBar.style.marginBottom = "10px";
+
+        selectionBar.style.background = "#fff3cd";
+
+        selectionBar.style.border = "1px solid #d6b656";
+
+        selectionBar.style.borderRadius = "6px";
+
+        selectionBar.style.boxShadow = "0 2px 6px rgba(0,0,0,0.2)";
+
+        selectionBar.style.flexWrap = "wrap";
+
+        selectionBar.style.alignItems = "center";
+
+        selectionBar.style.gap = "8px";
+
+        const selectionCount = document.createElement("span");
+
+        selectionCount.id = "historySelectionCount";
+
+        selectionCount.style.fontWeight = "bold";
+
+        selectionBar.appendChild(selectionCount);
+
+        const selectAllButton = document.createElement("button");
+
+        selectAllButton.type = "button";
+
+        selectAllButton.textContent = "すべて選択";
+
+        selectAllButton.onclick = () => {
+          historyList.forEach((project) => {
+            if (project.id !== undefined) {
+              selectedProjectIds.add(project.id);
+            }
+          });
+
+          updateHistorySelectionUI();
+        };
+
+        selectionBar.appendChild(selectAllButton);
+
+        const deleteButton = document.createElement("button");
+
+        deleteButton.type = "button";
+
+        deleteButton.textContent = "🗑 選択項目を削除";
+
+        deleteButton.style.color = "#b71c1c";
+
+        deleteButton.onclick = async () => {
+          await deleteSelectedHistoryProjects();
+        };
+
+        selectionBar.appendChild(deleteButton);
+
+        const clearButton = document.createElement("button");
+
+        clearButton.type = "button";
+
+        clearButton.textContent = "選択解除";
+
+        clearButton.onclick = () => {
+          selectedProjectIds.clear();
+
+          updateHistorySelectionUI();
+        };
+
+        selectionBar.appendChild(clearButton);
+
+        return selectionBar;
+      }
+
+      function updateHistorySelectionUI() {
+        const selectionBar = document.getElementById("historySelectionBar");
+
+        const selectionCount = document.getElementById("historySelectionCount");
+
+        const checkboxes = document.querySelectorAll(".historyProjectCheckbox");
+
+        checkboxes.forEach((checkbox) => {
+          const projectId = Number(checkbox.dataset.projectId);
+
+          checkbox.checked = selectedProjectIds.has(projectId);
+        });
+
+        if (!selectionBar || !selectionCount) {
+          return;
+        }
+
+        const selectedCount = selectedProjectIds.size;
+
+        selectionCount.textContent = `${selectedCount}件選択中`;
+
+        selectionBar.style.display = selectedCount > 0 ? "flex" : "none";
+      }
+
+      async function showHistory() {
+        const win = document.getElementById("historyWindow");
+
+        const content = document.getElementById("historyContent");
+
+        const historyList = await getProjectHistory();
+
+        content.innerHTML = "";
+
+        selectedProjectIds.clear();
+
+        const selectionBar = createHistorySelectionBar(historyList);
+
+        content.appendChild(selectionBar);
+
+        const historySummary = await createHistorySummary(historyList.length);
+
+        content.appendChild(historySummary);
+
+        if (historyList.length === 0) {
+          const emptyMessage = document.createElement("div");
+
+          emptyMessage.textContent = "履歴なし";
+
+          emptyMessage.style.padding = "10px";
+
+          content.appendChild(emptyMessage);
+
+          win.style.display = "block";
+
+          return;
+        }
+
+        historyList.forEach((project, index) => {
+          const card = document.createElement("div");
+
+          card.style.border = "1px solid #ccc";
+
+          card.style.padding = "10px";
+
+          card.style.marginBottom = "10px";
+
+          card.style.display = "flex";
+
+          card.style.gap = "10px";
+
+          card.style.alignItems = "center";
+
+          const checkbox = document.createElement("input");
+
+          checkbox.type = "checkbox";
+
+          checkbox.className = "historyProjectCheckbox";
+
+          checkbox.dataset.projectId = String(project.id);
+
+          checkbox.checked = selectedProjectIds.has(project.id);
+
+          checkbox.style.width = "20px";
+
+          checkbox.style.height = "20px";
+
+          checkbox.style.flexShrink = "0";
+
+          checkbox.setAttribute(
+            "aria-label",
+            `${project.createdAt || "日時不明"}の履歴を選択`,
+          );
+
+          checkbox.onchange = () => {
+            if (checkbox.checked) {
+              selectedProjectIds.add(project.id);
+            } else {
+              selectedProjectIds.delete(project.id);
+            }
+
+            updateHistorySelectionUI();
+          };
+          card.appendChild(checkbox);
+
+          if (project.thumbnail) {
+            const thumbnail = document.createElement("img");
+
+            thumbnail.src = project.thumbnail;
+
+            thumbnail.alt = "履歴のサムネイル";
+
+            thumbnail.style.width = "120px";
+
+            thumbnail.style.height = "90px";
+
+            thumbnail.style.objectFit = "cover";
+
+            thumbnail.style.border = "1px solid #999";
+
+            thumbnail.style.flexShrink = "0";
+
+            card.appendChild(thumbnail);
+          }
+
+          const details = document.createElement("div");
+
+          const countText = document.createElement("div");
+
+          countText.textContent = `検出本数：${project.totalCount}本`;
+
+          countText.style.fontWeight = "bold";
+
+          countText.style.marginBottom = "8px";
+
+          const dateText = document.createElement("div");
+
+          dateText.textContent = project.createdAt || "日時不明";
+
+          dateText.style.marginBottom = "10px";
+
+          const memoText = document.createElement("div");
+
+          memoText.textContent = project.memo
+            ? `メモ：${project.memo}`
+            : "メモ：なし";
+
+          memoText.style.marginBottom = "10px";
+
+          memoText.style.whiteSpace = "pre-wrap";
+
+          memoText.style.color = project.memo ? "#333" : "#777";
+
+          const openButton = document.createElement("button");
+
+          openButton.type = "button";
+
+          openButton.textContent = "開く";
+
+          openButton.onclick = async () => {
+            await loadHistory(index);
+            closeHistory();
+          };
+
+          const deleteButton = document.createElement("button");
+
+          deleteButton.type = "button";
+
+          deleteButton.textContent = "🗑 削除";
+
+          deleteButton.style.marginLeft = "8px";
+
+          deleteButton.style.color = "#b71c1c";
+
+          deleteButton.onclick = async () => {
+            await deleteHistoryProject(project);
+          };
+
+          details.appendChild(countText);
+          details.appendChild(dateText);
+          details.appendChild(memoText);
+          details.appendChild(openButton);
+          details.appendChild(deleteButton);
+
+          card.appendChild(details);
+          content.appendChild(card);
+        });
+
+        win.style.display = "block";
+      }
+      let modelLoadingPromise = null;
+
+      async function loadModel() {
+        updateNmsLabel();
+        nms.oninput = updateNmsLabel;
+
+        updateConfLabel();
+        confThreshold.oninput = updateConfLabel;
+
+        if (session) {
+          return session;
+        }
+
+        if (modelLoadingPromise) {
+          return modelLoadingPromise;
+        }
+
+        ort.env.wasm.numThreads = 1;
+        ort.env.wasm.proxy = false;
+
+        ort.env.wasm.wasmPaths = "./lib/";
+
+        modelLoadingPromise = ort.InferenceSession.create(
+          "./log_counter_v6.onnx",
+          {
+            executionProviders: ["wasm"],
+          },
+        );
+
+        try {
+          session = await modelLoadingPromise;
+
+          console.log("✅ ONNXロード成功");
+
+          console.log("入力名=", session.inputNames);
+
+          console.log("出力名=", session.outputNames);
+
+          return session;
+        } catch (e) {
+          session = null;
+
+          console.error("❌ ONNXロード失敗", e);
+
+          throw e;
+        } finally {
+          modelLoadingPromise = null;
+        }
+      }
+
+      async function initializeApp() {
+        try {
+          await openDB();
+
+          await enforceProjectLimit();
+
+          await loadModel();
+
+          checkOrientation();
+
+          window.addEventListener("resize", checkOrientation);
+        } catch (error) {
+          console.error("❌ アプリ初期化失敗", error);
+
+          showMsg("❌ AIモデルの読み込みに失敗しました");
+        }
+      }
+
+      initializeApp();
+
+      async function testInference() {
+        console.log("session=", session);
+
+        if (!session) {
+          alert("AIモデル読込中です。ちょっと待ってね！");
+          return;
+        }
+
+        if (!img.src) {
+          alert("先に画像を選択してください");
+          return;
+        }
+
+        pts = [];
+        photos[current].pts = [];
+
+        showMsg("🤖 AI解析中...");
+
+        const canvas = document.createElement("canvas");
+
+        canvas.width = 1280;
+        canvas.height = 1280;
+
+        const ctx = canvas.getContext("2d");
+
+        ctx.drawImage(img, 0, 0, 1280, 1280);
+
+        const imageData = ctx.getImageData(0, 0, 1280, 1280);
+
+        const data = new Float32Array(1 * 3 * 1280 * 1280);
+
+        let p = 0;
+
+        for (let i = 0; i < imageData.data.length; i += 4) {
+          data[p] = imageData.data[i] / 255;
+          data[p + 1280 * 1280] = imageData.data[i + 1] / 255;
+          data[p + 2 * 1280 * 1280] = imageData.data[i + 2] / 255;
+
+          p++;
+        }
+
+        const tensor = new ort.Tensor("float32", data, [1, 3, 1280, 1280]);
+
+        console.log("run直前");
+
+        const results = await session.run({
+          images: tensor,
+        });
+
+        window.lastResults = results;
+
+        console.log(results);
+
+        const d = results.output0.data;
+        const N = 33600;
+
+        let tempPts = [];
+
+        for (let i = 0; i < N; i++) {
+          const conf = d[i + N * 4];
+
+          if (conf >= confThreshold.value / 100) {
+            const candidate = {
+              x: d[i],
+              y: d[i + N],
+              w: d[i + N * 2],
+              h: d[i + N * 3],
+              conf,
+            };
+            const scaleX = img.width / 1280;
+            const scaleY = img.height / 1280;
+            const realX = candidate.x * scaleX;
+            const realY = candidate.y * scaleY;
+
+            // 矩形除外判定
+            const insideRect = excludeRects.some(
+              (r) =>
+                realX >= r.x &&
+                realX <= r.x + r.w &&
+                realY >= r.y &&
+                realY <= r.y + r.h,
+            );
+
+            // ポリゴン除外判定
+            const insidePolygon = excludePolygons.some((poly) =>
+              pointInPolygon(
+                {
+                  x: realX,
+                  y: realY,
+                },
+                poly,
+              ),
+            );
+
+            if (!insideRect && !insidePolygon) {
+              tempPts.push(candidate);
+            }
+          }
+        }
+        function iou(a, b) {
+          const ax1 = a.x - a.w / 2;
+          const ay1 = a.y - a.h / 2;
+          const ax2 = a.x + a.w / 2;
+          const ay2 = a.y + a.h / 2;
+
+          const bx1 = b.x - b.w / 2;
+          const by1 = b.y - b.h / 2;
+          const bx2 = b.x + b.w / 2;
+          const by2 = b.y + b.h / 2;
+
+          const interX1 = Math.max(ax1, bx1);
+          const interY1 = Math.max(ay1, by1);
+          const interX2 = Math.min(ax2, bx2);
+          const interY2 = Math.min(ay2, by2);
+
+          const interW = Math.max(0, interX2 - interX1);
+          const interH = Math.max(0, interY2 - interY1);
+
+          const interArea = interW * interH;
+
+          const areaA = a.w * a.h;
+          const areaB = b.w * b.h;
+
+          return interArea / (areaA + areaB - interArea);
+        }
+        let nmsPts = [...tempPts].sort((a, b) => b.conf - a.conf);
+
+        let finalPts = [];
+
+        while (nmsPts.length) {
+          const best = nmsPts.shift();
+
+          finalPts.push(best);
+
+          const overlap = nms.value / 100;
+
+          nmsPts = nmsPts.filter((p) => iou(best, p) < overlap);
+        }
+        const scaleX = img.width / 1280;
+        const scaleY = img.height / 1280;
+
+        pts = finalPts.map((p) => ({
+          x: p.x * scaleX,
+          y: p.y * scaleY,
+          size: +msize.value,
+          fill: fillColor,
+          border: borderColor,
+        }));
+
+        photos[current].pts = pts;
+
+        draw();
+
+        showMsg(`✅ ${pts.length}本検出`);
+      }
+    </script>
+  <script>
+(function () {
+  if (!("serviceWorker" in navigator)) return;
+  window.addEventListener("load", async function () {
+    if (location.protocol !== "https:" && location.hostname !== "localhost" && location.hostname !== "127.0.0.1") {
+      console.warn("Offline mode requires HTTPS or localhost.");
+      return;
+    }
+    try {
+      const registration = await navigator.serviceWorker.register("./sw.js", { scope: "./" });
+      await navigator.serviceWorker.ready;
+      console.log("Offline mode is ready:", registration.scope);
+    } catch (error) {
+      console.error("Service Worker registration failed", error);
+    }
+  });
+})();
+</script>
+</body>
+</html>

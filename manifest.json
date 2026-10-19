@@ -1,0 +1,21 @@
+{
+  "id": "./index.html",
+  "name": "マルタ・カゾエール",
+  "short_name": "マルタ数える",
+  "description": "写真から丸太を自動検出し、本数を集計する業務向けWebアプリ",
+  "lang": "ja",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#ffffff",
+  "theme_color": "#2e7d32",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
