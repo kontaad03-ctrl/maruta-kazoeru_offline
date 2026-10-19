@@ -1,5 +1,5 @@
 "use strict";
-const CACHE_NAME="maruta-kazoeru-offline-v2";
+const CACHE_NAME="maruta-kazoeru-offline-v3";
 const CORE_FILES=["./","./index.html","./manifest.json","./icon.svg","./log_counter_v6.onnx","./lib/ort.min.js","./lib/ort-wasm-simd-threaded.mjs","./lib/ort-wasm-simd-threaded.wasm"];
 self.addEventListener("install",event=>event.waitUntil((async()=>{const cache=await caches.open(CACHE_NAME);for(const path of CORE_FILES){const response=await fetch(new Request(path,{cache:"reload"}));if(!response.ok)throw new Error(`cache failed: ${path} (${response.status})`);await cache.put(path,response.clone());}await self.skipWaiting();})()));
 self.addEventListener("activate",event=>event.waitUntil((async()=>{const names=await caches.keys();await Promise.all(names.filter(n=>n.startsWith("maruta-kazoeru-offline-")&&n!==CACHE_NAME).map(n=>caches.delete(n)));await self.clients.claim();})()));
