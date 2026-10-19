@@ -22,12 +22,7 @@
         font-weight: bold;
       }
       canvas {
-        display: block;
-        width: min(1200px, calc(100vw - 30px));
-        height: auto;
         border: 1px solid #666;
-        box-sizing: border-box;
-        image-rendering: auto;
       }
       .help {
         background: #f3f3f3;
@@ -303,6 +298,12 @@
           width: 100%;
           height: auto;
           margin-bottom: 80px;
+
+          /*
+          * キャンバス上のピンチをページ拡大ではなく、
+          * アプリ独自の写真拡大として処理する。
+          */
+          touch-action: none;
         }
         body {
           margin: 4px;
@@ -437,10 +438,13 @@
         }
       }
     </style>
-      <meta name="theme-color" content="#2e7d32" />
+    <meta name="theme-color" content="#2e7d32" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-title" content="繝槭Ν繧ｿ繝ｻ繧ｫ繧ｾ繧ｨ繝ｼ繝ｫ" />
+    <meta
+      name="apple-mobile-web-app-title"
+      content="繝槭Ν繧ｿ繝ｻ繧ｫ繧ｾ繧ｨ繝ｼ繝ｫ"
+    />
     <link rel="manifest" href="./manifest.json" />
     <link rel="icon" href="./icon.svg" type="image/svg+xml" />
   </head>
@@ -968,6 +972,17 @@
       let showNumber = true;
       let history = [];
 
+      // キャンバス内表示位置
+      let viewOffsetX = 0;
+      let viewOffsetY = 0;
+
+      // スマホのピンチ操作管理
+      let pinchActive = false;
+      let pinchStartDistance = 0;
+      let pinchStartScale = 1;
+      let pinchImageCenter = { x: 0, y: 0 };
+      let ignoreMouseUntil = 0;
+
       const MAX_PROJECTS = 30;
 
       const selectedProjectIds = new Set();
@@ -1324,6 +1339,14 @@
       }
       function switchTab(i) {
         current = i;
+
+        /*
+         * 写真切替時は表示倍率と位置を初期化する。
+         */
+        scale = 1;
+        viewOffsetX = 0;
+        viewOffsetY = 0;
+
         img = photos[i].img;
         pts = photos[i].pts;
         excludeRects = photos[i].excludeRects;
@@ -1350,8 +1373,15 @@
         ctx.setTransform(1, 0, 0, 1, 0, 0);
         ctx.clearRect(0, 0, cv.width, cv.height);
         ctx.save();
+        /*
+         * キャンバス自体のサイズは変えず、
+         * キャンバス内部の写真表示だけを移動・拡大する。
+         */
+        ctx.translate(viewOffsetX, viewOffsetY);
         ctx.scale(scale, scale);
-        if (img.src) ctx.drawImage(img, 0, 0);
+        if (img.src) {
+          ctx.drawImage(img, 0, 0);
+        }
         let ns = +nsize.value;
         pts.forEach((p, i) => {
           ctx.strokeStyle = i === selected ? "orange" : p.border;
@@ -1446,10 +1476,40 @@
         renderTabs();
       }
       function pos(e) {
-        let r = cv.getBoundingClientRect();
+        const rect = cv.getBoundingClientRect();
+        /*
+         * CSS表示座標をCanvas内部座標へ変換する。
+         */
+        const canvasX = (e.clientX - rect.left) * (cv.width / rect.width);
+        const canvasY = (e.clientY - rect.top) * (cv.height / rect.height);
+        /*
+         * キャンバス内の移動・拡大を逆算して、
+         * 元画像上の座標を取得する。
+         */
         return {
-          x: ((e.clientX - r.left) * (cv.width / r.width)) / scale,
-          y: ((e.clientY - r.top) * (cv.height / r.height)) / scale,
+          x: (canvasX - viewOffsetX) / scale,
+          y: (canvasY - viewOffsetY) / scale,
+        };
+      }
+      function touchCanvasPosition(touch) {
+        const rect = cv.getBoundingClientRect();
+        return {
+          x: (touch.clientX - rect.left) * (cv.width / rect.width),
+          y: (touch.clientY - rect.top) * (cv.height / rect.height),
+        };
+      }
+      function touchDistance(touch1, touch2) {
+        return Math.hypot(
+          touch2.clientX - touch1.clientX,
+          touch2.clientY - touch1.clientY,
+        );
+      }
+      function touchMidpoint(touch1, touch2) {
+        const point1 = touchCanvasPosition(touch1);
+        const point2 = touchCanvasPosition(touch2);
+        return {
+          x: (point1.x + point2.x) / 2,
+          y: (point1.y + point2.y) / 2,
         };
       }
       function nearest(p) {
@@ -1481,6 +1541,10 @@
         return inside;
       }
       cv.onmousedown = (e) => {
+        if (pinchActive || Date.now() < ignoreMouseUntil) {
+          e.preventDefault();
+          return;
+        }
         if (polygonMode && e.button === 0) {
           currentPolygon.push(pos(e));
           draw();
@@ -1502,6 +1566,10 @@
         }, 400);
       };
       cv.onmouseup = (e) => {
+        if (pinchActive || Date.now() < ignoreMouseUntil) {
+          e.preventDefault();
+          return;
+        }
         if (polygonMode) {
           return;
         }
@@ -1648,18 +1716,159 @@
           draw();
         }
       };
+      /*
+       * ============================================================
+       * スマホ版：キャンバス内ピンチズーム
+       * ============================================================
+       */
+
+      cv.addEventListener(
+        "touchstart",
+        (event) => {
+          if (event.touches.length !== 2) {
+            return;
+          }
+
+          event.preventDefault();
+
+          clearTimeout(holdTimer);
+
+          pinchActive = true;
+          pinchStartScale = scale;
+
+          const touch1 = event.touches[0];
+          const touch2 = event.touches[1];
+
+          pinchStartDistance = touchDistance(touch1, touch2);
+
+          const midpoint = touchMidpoint(touch1, touch2);
+
+          /*
+           * ピンチ開始時に、指の中央にあった
+           * 元画像上の位置を保存する。
+           */
+          pinchImageCenter = {
+            x: (midpoint.x - viewOffsetX) / scale,
+            y: (midpoint.y - viewOffsetY) / scale,
+          };
+
+          /*
+           * ピンチ終了直後に疑似マウスイベントが発生し、
+           * マーカーが追加されるのを防止する。
+           */
+          ignoreMouseUntil = Date.now() + 700;
+        },
+        {
+          passive: false,
+        },
+      );
+
+      cv.addEventListener(
+        "touchmove",
+        (event) => {
+          if (!pinchActive || event.touches.length !== 2) {
+            return;
+          }
+
+          event.preventDefault();
+
+          const touch1 = event.touches[0];
+          const touch2 = event.touches[1];
+
+          const currentDistance = touchDistance(touch1, touch2);
+
+          if (pinchStartDistance <= 0) {
+            return;
+          }
+
+          /*
+           * 指同士の距離の変化から拡大率を求める。
+           */
+          const scaleRatio = currentDistance / pinchStartDistance;
+
+          const newScale = Math.max(
+            0.2,
+            Math.min(5, pinchStartScale * scaleRatio),
+          );
+
+          const midpoint = touchMidpoint(touch1, touch2);
+
+          /*
+           * ピンチの中央にある写真上の位置を維持する。
+           * 指を左右へ動かした場合は、二本指パンにもなる。
+           */
+          viewOffsetX = midpoint.x - pinchImageCenter.x * newScale;
+
+          viewOffsetY = midpoint.y - pinchImageCenter.y * newScale;
+
+          scale = newScale;
+
+          draw();
+        },
+        {
+          passive: false,
+        },
+      );
+
+      function finishPinchZoom(event) {
+        if (!pinchActive) {
+          return;
+        }
+
+        if (event.touches.length >= 2) {
+          return;
+        }
+
+        pinchActive = false;
+        pinchStartDistance = 0;
+
+        ignoreMouseUntil = Date.now() + 700;
+
+        draw();
+      }
+
+      cv.addEventListener("touchend", finishPinchZoom, {
+        passive: false,
+      });
+
+      cv.addEventListener("touchcancel", finishPinchZoom, {
+        passive: false,
+      });
       cv.addEventListener(
         "wheel",
         (e) => {
-          if (!e.ctrlKey) return;
+          if (!e.ctrlKey) {
+            return;
+          }
+
           e.preventDefault();
-          scale = Math.max(
+
+          const rect = cv.getBoundingClientRect();
+
+          const canvasX = (e.clientX - rect.left) * (cv.width / rect.width);
+
+          const canvasY = (e.clientY - rect.top) * (cv.height / rect.height);
+
+          const imageX = (canvasX - viewOffsetX) / scale;
+
+          const imageY = (canvasY - viewOffsetY) / scale;
+
+          const newScale = Math.max(
             0.2,
             Math.min(5, scale * (e.deltaY < 0 ? 1.1 : 0.9)),
           );
+
+          viewOffsetX = canvasX - imageX * newScale;
+
+          viewOffsetY = canvasY - imageY * newScale;
+
+          scale = newScale;
+
           draw();
         },
-        { passive: false },
+        {
+          passive: false,
+        },
       );
       cv.ondblclick = () => {
         if (!isMobile && polygonMode) {
@@ -2769,23 +2978,30 @@
         showMsg(`✅ ${pts.length}本検出`);
       }
     </script>
-  <script>
-(function () {
-  if (!("serviceWorker" in navigator)) return;
-  window.addEventListener("load", async function () {
-    if (location.protocol !== "https:" && location.hostname !== "localhost" && location.hostname !== "127.0.0.1") {
-      console.warn("Offline mode requires HTTPS or localhost.");
-      return;
-    }
-    try {
-      const registration = await navigator.serviceWorker.register("./sw.js", { scope: "./" });
-      await navigator.serviceWorker.ready;
-      console.log("Offline mode is ready:", registration.scope);
-    } catch (error) {
-      console.error("Service Worker registration failed", error);
-    }
-  });
-})();
-</script>
-</body>
+    <script>
+      (function () {
+        if (!("serviceWorker" in navigator)) return;
+        window.addEventListener("load", async function () {
+          if (
+            location.protocol !== "https:" &&
+            location.hostname !== "localhost" &&
+            location.hostname !== "127.0.0.1"
+          ) {
+            console.warn("Offline mode requires HTTPS or localhost.");
+            return;
+          }
+          try {
+            const registration = await navigator.serviceWorker.register(
+              "./sw.js",
+              { scope: "./" },
+            );
+            await navigator.serviceWorker.ready;
+            console.log("Offline mode is ready:", registration.scope);
+          } catch (error) {
+            console.error("Service Worker registration failed", error);
+          }
+        });
+      })();
+    </script>
+  </body>
 </html>
