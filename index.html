@@ -915,6 +915,7 @@
       </div>
     </div>
     <script>
+      const CANVAS_LEFT_PADDING = 24;
       const cv = document.getElementById("cv"),
         ctx = cv.getContext("2d");
 
@@ -1351,7 +1352,7 @@
         pts = photos[i].pts;
         excludeRects = photos[i].excludeRects;
         excludePolygons = photos[i].excludePolygons;
-        cv.width = img.width;
+        cv.width = img.width + CANVAS_LEFT_PADDING;
         cv.height = img.height;
         if (isMobile) {
           document.getElementById("photoIndex").textContent =
@@ -1373,12 +1374,15 @@
         ctx.setTransform(1, 0, 0, 1, 0, 0);
         ctx.clearRect(0, 0, cv.width, cv.height);
         ctx.save();
+
         /*
-         * キャンバス自体のサイズは変えず、
-         * キャンバス内部の写真表示だけを移動・拡大する。
+         * 左側へ操作用の余白を確保する。
+         * 余白はズームしても24pxのまま固定する。
          */
-        ctx.translate(viewOffsetX, viewOffsetY);
+        ctx.translate(CANVAS_LEFT_PADDING + viewOffsetX, viewOffsetY);
+
         ctx.scale(scale, scale);
+
         if (img.src) {
           ctx.drawImage(img, 0, 0);
         }
@@ -1475,19 +1479,16 @@
 
         renderTabs();
       }
-      function pos(e) {
+      function pos(event) {
         const rect = cv.getBoundingClientRect();
-        /*
-         * CSS表示座標をCanvas内部座標へ変換する。
-         */
-        const canvasX = (e.clientX - rect.left) * (cv.width / rect.width);
-        const canvasY = (e.clientY - rect.top) * (cv.height / rect.height);
-        /*
-         * キャンバス内の移動・拡大を逆算して、
-         * 元画像上の座標を取得する。
-         */
+
+        const canvasX = (event.clientX - rect.left) * (cv.width / rect.width);
+
+        const canvasY = (event.clientY - rect.top) * (cv.height / rect.height);
+
         return {
-          x: (canvasX - viewOffsetX) / scale,
+          x: (canvasX - CANVAS_LEFT_PADDING - viewOffsetX) / scale,
+
           y: (canvasY - viewOffsetY) / scale,
         };
       }
@@ -1748,10 +1749,10 @@
            * 元画像上の位置を保存する。
            */
           pinchImageCenter = {
-            x: (midpoint.x - viewOffsetX) / scale,
+            x: (midpoint.x - CANVAS_LEFT_PADDING - viewOffsetX) / scale,
+
             y: (midpoint.y - viewOffsetY) / scale,
           };
-
           /*
            * ピンチ終了直後に疑似マウスイベントが発生し、
            * マーカーが追加されるのを防止する。
@@ -1797,7 +1798,8 @@
            * ピンチの中央にある写真上の位置を維持する。
            * 指を左右へ動かした場合は、二本指パンにもなる。
            */
-          viewOffsetX = midpoint.x - pinchImageCenter.x * newScale;
+          viewOffsetX =
+            midpoint.x - CANVAS_LEFT_PADDING - pinchImageCenter.x * newScale;
 
           viewOffsetY = midpoint.y - pinchImageCenter.y * newScale;
 
