@@ -269,6 +269,9 @@
         text-align: center;
       }
       /* ===== スマホ・タブレット用 ===== */
+      #mobileActionBtn {
+        display: none;
+      }
       #mobileSettingsBtn {
         display: none;
       }
@@ -278,46 +281,143 @@
       #mobileSettingsPanel {
         display: none;
         position: fixed;
-        top: 70px;
-        left: 10px;
-        width: 260px;
-        max-height: calc(100vh - 100px);
+
+        top: 8px;
+        left: 70px;
+
+        width: min(280px, calc(100vw - 150px));
+        max-height: calc(100dvh - 16px);
+
         overflow-y: auto;
+
         background: white;
         border: 2px solid #666;
         border-radius: 10px;
         padding: 10px;
+
         z-index: 10001;
+
         box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+
+        -webkit-overflow-scrolling: touch;
       }
       #mobileSettingsPanel button {
         margin: 2px;
       }
       @media (pointer: coarse) {
         canvas {
+          display: block;
           width: 100%;
           height: auto;
-          margin-bottom: 80px;
 
           /*
-          * キャンバス上のピンチをページ拡大ではなく、
-          * アプリ独自の写真拡大として処理する。
-          */
-          touch-action: none;
+     * 下部ツールバーは普段隠すため、
+     * 80pxの固定余白は不要。
+     */
+          margin-bottom: 12px;
+
+          /*
+     * 1本指の縦方向スワイプは、
+     * ページ全体のスクロールとして許可する。
+     *
+     * 2本指操作はJavaScript側でpreventDefaultし、
+     * 写真のズーム・移動として処理する。
+     */
+          touch-action: pan-y;
         }
         body {
           margin: 4px;
+        }
+        #appTitle {
+          display: none;
         }
         #desktopControls {
           display: none;
         }
         #photoIndex {
           display: block;
+
+          position: sticky;
+          top: 0;
+          z-index: 8000;
+
+          box-sizing: border-box;
+          width: 100%;
+
+          margin: 0 0 3px;
+          padding: 6px 64px;
+
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+
           text-align: center;
-          font-size: 18px;
+          font-size: 15px;
           font-weight: bold;
-          margin: 6px 0;
-          color: #333;
+
+          color: #222;
+          background: rgba(255, 255, 255, 0.94);
+          border-bottom: 1px solid #aaa;
+          box-shadow: 0 2px 5px rgba(0, 0, 0, 0.12);
+
+          backdrop-filter: blur(4px);
+          -webkit-backdrop-filter: blur(4px);
+        }
+        #status {
+          position: fixed;
+          top: 42px;
+          left: 8px;
+          right: 8px;
+
+          z-index: 8500;
+
+          box-sizing: border-box;
+          margin: 0;
+          padding: 7px 12px;
+
+          pointer-events: none;
+
+          font-size: 15px;
+          font-weight: bold;
+
+          background: rgba(232, 245, 233, 0.96);
+          border: 1px solid #4caf50;
+          border-radius: 6px;
+          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+        }
+        #mobileActionBtn {
+          display: flex;
+
+          position: fixed;
+          right: 12px;
+          bottom: 12px;
+
+          width: 56px;
+          height: 56px;
+
+          align-items: center;
+          justify-content: center;
+
+          z-index: 10002;
+
+          border: 2px solid rgba(255, 255, 255, 0.8);
+          border-radius: 50%;
+
+          color: white;
+          background: rgba(50, 50, 50, 0.88);
+          box-shadow: 0 3px 10px rgba(0, 0, 0, 0.38);
+
+          font-size: 25px;
+          font-weight: bold;
+        }
+
+        /*
+ * ツールバー表示中は、
+ * 丸ボタンをツールバーの上へ移動する。
+ */
+        #mobileActionBtn.is-open {
+          bottom: 82px;
+          background: rgba(183, 28, 28, 0.92);
         }
         #mobileSettingsBtn {
           display: block;
@@ -335,18 +435,48 @@
         }
         #mobileToolbar {
           display: flex;
+
           position: fixed;
           bottom: 0;
           left: 0;
           right: 0;
-          height: 70px;
+
+          min-height: 70px;
+
           background: #222;
           z-index: 9999;
           border-top: 2px solid #666;
+
+          /*
+   * 通常時は画面の下へ隠す。
+   */
+          transform: translateY(110%);
+          opacity: 0;
+          pointer-events: none;
+
+          transition:
+            transform 180ms ease,
+            opacity 180ms ease;
+        }
+
+        /*
+ * 操作メニューを開いたときだけ表示する。
+ */
+        #mobileToolbar.is-open {
+          transform: translateY(0);
+          opacity: 1;
+          pointer-events: auto;
         }
         #mobileToolbar button {
           flex: 1;
-          font-size: 22px;
+          min-width: 0;
+          min-height: 66px;
+
+          padding: 4px 2px;
+
+          font-size: 18px;
+          line-height: 1.25;
+
           border: none;
           background: #444;
           color: white;
@@ -503,7 +633,7 @@
       <button onclick="closeMobileSettings()">閉じる</button>
     </div>
 
-    <h3>マルタ・カゾエール</h3>
+    <h3 id="appTitle">マルタ・カゾエール</h3>
     <div id="photoIndex">📷 0 / 0</div>
     <div id="status"></div>
     <div id="desktopControls">
@@ -878,26 +1008,76 @@
       </div>
     </div>
     <canvas id="cv"></canvas>
+
+    <button
+      id="mobileActionBtn"
+      type="button"
+      onclick="toggleMobileToolbar()"
+      aria-expanded="false"
+      aria-controls="mobileToolbar"
+      aria-label="操作メニューを開く"
+    >
+      ☰
+    </button>
+
     <div id="mobileToolbar">
       <div id="normalBar">
-        <button onclick="prevPhoto()">⬅️</button>
-        <button onclick="mobileOpenFile()">
-          📂<br />
+        <button
+          onclick="
+            prevPhoto();
+            closeMobileToolbar();
+          "
+        >
+          ⬅️
+        </button>
+
+        <button
+          onclick="
+            mobileOpenFile();
+            closeMobileToolbar();
+          "
+        >
+          📂
+          <br />
           読込
         </button>
-        <button onclick="testInference()">
-          🤖<br />
+
+        <button
+          onclick="
+            testInference();
+            closeMobileToolbar();
+          "
+        >
+          🤖
+          <br />
           検出
         </button>
+
         <button onclick="startPolygonMode()">
-          🚫<br />
+          🚫
+          <br />
           除外
         </button>
-        <button onclick="saveProject()">
-          💾<br />
+
+        <button
+          onclick="
+            saveProject();
+            closeMobileToolbar();
+          "
+        >
+          💾
+          <br />
           保存
         </button>
-        <button onclick="nextPhoto()">➡️</button>
+
+        <button
+          onclick="
+            nextPhoto();
+            closeMobileToolbar();
+          "
+        >
+          ➡️
+        </button>
       </div>
       <div id="polygonBar" style="display: none">
         <button onclick="finishPolygon()">
@@ -983,6 +1163,9 @@
       let pinchStartScale = 1;
       let pinchImageCenter = { x: 0, y: 0 };
       let ignoreMouseUntil = 0;
+      let singleTouchStartX = 0;
+      let singleTouchStartY = 0;
+      let singleTouchScrolled = false;
 
       const MAX_PROJECTS = 30;
 
@@ -1033,10 +1216,54 @@
           notice.style.display = "none";
         }
       }
+      function setMobileToolbarOpen(open) {
+        const toolbar = document.getElementById("mobileToolbar");
+
+        const actionButton = document.getElementById("mobileActionBtn");
+
+        toolbar.classList.toggle("is-open", open);
+
+        actionButton.classList.toggle("is-open", open);
+
+        actionButton.textContent = open ? "✕" : "☰";
+
+        actionButton.setAttribute("aria-expanded", String(open));
+
+        actionButton.setAttribute(
+          "aria-label",
+          open ? "操作メニューを閉じる" : "操作メニューを開く",
+        );
+      }
+
+      function toggleMobileToolbar() {
+        const toolbar = document.getElementById("mobileToolbar");
+
+        const open = !toolbar.classList.contains("is-open");
+
+        /*
+         * 操作メニューを開くときは、
+         * 左上の設定パネルを閉じる。
+         */
+        if (open) {
+          closeMobileSettings();
+        }
+
+        setMobileToolbarOpen(open);
+      }
+
+      function closeMobileToolbar() {
+        setMobileToolbarOpen(false);
+      }
       function mobileSettings() {
         const panel = document.getElementById("mobileSettingsPanel");
-        panel.style.display =
-          panel.style.display === "block" ? "none" : "block";
+
+        const willOpen = panel.style.display !== "block";
+
+        if (willOpen) {
+          closeMobileToolbar();
+        }
+
+        panel.style.display = willOpen ? "block" : "none";
       }
       function closeMobileSettings() {
         document.getElementById("mobileSettingsPanel").style.display = "none";
@@ -1135,8 +1362,17 @@
         polygonMode = true;
         excludeMode = false;
         currentPolygon = [];
+
         setMobileMode("polygon");
+
+        /*
+         * 確定・取消・終了ボタンが必要なので、
+         * ポリゴンモード中はツールバーを開いておく。
+         */
+        setMobileToolbarOpen(true);
+
         showMsg("🔺 ポリゴン除外モード");
+
         draw();
       }
       function finishPolygon() {
@@ -1157,10 +1393,15 @@
       function exitPolygonMode() {
         currentPolygon = [];
         polygonMode = false;
+
         setMobileMode("normal");
+        closeMobileToolbar();
+
         showMsg("通常モード");
+
         draw();
       }
+
       function toggleHelp() {
         const panel = document.getElementById("helpPanel");
         if (getComputedStyle(panel).display === "none") {
@@ -1726,6 +1967,23 @@
       cv.addEventListener(
         "touchstart",
         (event) => {
+          /*
+           * 1本指はページスクロールまたはタップ。
+           * preventDefaultしない。
+           */
+          if (event.touches.length === 1) {
+            singleTouchStartX = event.touches[0].clientX;
+
+            singleTouchStartY = event.touches[0].clientY;
+
+            singleTouchScrolled = false;
+
+            return;
+          }
+
+          /*
+           * 2本指だけ写真操作として扱う。
+           */
           if (event.touches.length !== 2) {
             return;
           }
@@ -1744,18 +2002,14 @@
 
           const midpoint = touchMidpoint(touch1, touch2);
 
-          /*
-           * ピンチ開始時に、指の中央にあった
-           * 元画像上の位置を保存する。
-           */
           pinchImageCenter = {
             x: (midpoint.x - CANVAS_LEFT_PADDING - viewOffsetX) / scale,
 
             y: (midpoint.y - viewOffsetY) / scale,
           };
+
           /*
-           * ピンチ終了直後に疑似マウスイベントが発生し、
-           * マーカーが追加されるのを防止する。
+           * 2本指操作後にマーカーが追加されるのを防ぐ。
            */
           ignoreMouseUntil = Date.now() + 700;
         },
@@ -1767,6 +2021,35 @@
       cv.addEventListener(
         "touchmove",
         (event) => {
+          /*
+           * 1本指はページ全体のスクロール。
+           * JavaScriptでは移動量の記録だけ行い、
+           * preventDefaultしない。
+           */
+          if (event.touches.length === 1) {
+            const deltaX = event.touches[0].clientX - singleTouchStartX;
+
+            const deltaY = event.touches[0].clientY - singleTouchStartY;
+
+            if (Math.hypot(deltaX, deltaY) > 8) {
+              singleTouchScrolled = true;
+
+              /*
+               * スクロール後に疑似マウスイベントで
+               * マーカーが追加されるのを防ぐ。
+               */
+              ignoreMouseUntil = Date.now() + 500;
+
+              clearTimeout(holdTimer);
+            }
+
+            return;
+          }
+
+          /*
+           * 2本指の写真操作中だけ、
+           * ページスクロールを防止する。
+           */
           if (!pinchActive || event.touches.length !== 2) {
             return;
           }
@@ -1782,9 +2065,6 @@
             return;
           }
 
-          /*
-           * 指同士の距離の変化から拡大率を求める。
-           */
           const scaleRatio = currentDistance / pinchStartDistance;
 
           const newScale = Math.max(
@@ -1794,10 +2074,6 @@
 
           const midpoint = touchMidpoint(touch1, touch2);
 
-          /*
-           * ピンチの中央にある写真上の位置を維持する。
-           * 指を左右へ動かした場合は、二本指パンにもなる。
-           */
           viewOffsetX =
             midpoint.x - CANVAS_LEFT_PADDING - pinchImageCenter.x * newScale;
 
@@ -1813,10 +2089,25 @@
       );
 
       function finishPinchZoom(event) {
+        /*
+         * 1本指のスクロール終了。
+         */
         if (!pinchActive) {
+          if (event.touches.length === 0 && singleTouchScrolled) {
+            ignoreMouseUntil = Date.now() + 500;
+          }
+
+          if (event.touches.length === 0) {
+            singleTouchScrolled = false;
+          }
+
           return;
         }
 
+        /*
+         * まだ2本指が残っているなら、
+         * ピンチ操作は継続。
+         */
         if (event.touches.length >= 2) {
           return;
         }
@@ -1825,6 +2116,8 @@
         pinchStartDistance = 0;
 
         ignoreMouseUntil = Date.now() + 700;
+
+        singleTouchScrolled = false;
 
         draw();
       }
