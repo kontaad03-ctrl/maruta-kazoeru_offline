@@ -571,10 +571,7 @@
     <meta name="theme-color" content="#2e7d32" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta
-      name="apple-mobile-web-app-title"
-      content="繝槭Ν繧ｿ繝ｻ繧ｫ繧ｾ繧ｨ繝ｼ繝ｫ"
-    />
+    <meta name="apple-mobile-web-app-title" content="マルタ・カゾエール" />
     <link rel="manifest" href="./manifest.json" />
     <link rel="icon" href="./icon.svg" type="image/svg+xml" />
   </head>
@@ -906,43 +903,89 @@
 
           1. 端末を横向きにします
           <br />
-          2.「📂読込」で写真を選択します
+
+          2. 右下の「☰」を押して操作メニューを開きます
           <br />
-          3. 必要な場合は「🚫除外」で除外範囲を設定します
+
+          3.「📂読込」で写真を選択します
           <br />
-          4.「🤖検出」で丸太を自動検出します
+
+          4. 必要な場合は「🚫除外」で除外範囲を設定します
           <br />
-          5. マーカーを追加・削除して結果を修正します
+
+          5.「🤖検出」で丸太を自動検出します
           <br />
-          6.「💾保存」でプロジェクトを保存します
+
+          6. 写真上で未検出や誤検出を確認し、マーカーを修正します
+          <br />
+
+          7.「💾保存」でプロジェクトを保存します
+          <br /><br />
+
+          読込、検出、保存などのボタンは、通常時は画面を広く使うため隠れています。
+          <br />
+
+          必要なときに右下の「☰」を押して表示してください。
+        </div>
+
+        <div class="mobileHelpSection">
+          <b>🔍 写真表示・画面移動</b>
+
+          写真上を1本指で上下へスワイプすると、ページ全体を上下へ移動できます。
+          <br />
+
+          写真だけが画面に表示されている場合でも、1本指で上へスワイプすると、本数表示や画面上部へ戻れます。
+          <br /><br />
+
+          写真上を2本指で広げると拡大できます。
+          <br />
+
+          2本指を狭めると縮小できます。
+          <br />
+
+          拡大中に2本指を同時に動かすと、写真の表示位置を移動できます。
+          <br /><br />
+
+          1本指での操作はページ移動、2本指での操作は写真の拡大・縮小・移動です。
         </div>
 
         <div class="mobileHelpSection">
           <b>✏ マーカー操作</b>
 
-          写真をタップすると、マーカーを追加できます。
+          写真上を動かさずに1回タップすると、マーカーを追加できます。
           <br />
+
           削除したいマーカーを長押しすると、マーカーを削除できます。
           <br />
+
+          1本指を動かした場合は、マーカー追加ではなくページのスクロールになります。
+          <br />
+
           スマホ版ではマーカーの移動はできません。
         </div>
 
         <div class="mobileHelpSection">
           <b>🚫 除外範囲</b>
 
-          「🚫除外」を押し、写真上をタップして頂点を3点以上追加します。
+          右下の「☰」を押して操作メニューを開き、「🚫除外」を選択します。
           <br />
-          「✅確定」で除外範囲を確定します。
+
+          写真上をタップして頂点を3点以上追加します。
           <br />
+
+          下部の「✅確定」で除外範囲を確定します。
+          <br />
+
           「❌取消」で入力中の頂点を取り消せます。
           <br />
-          「🔙終了」で通常操作へ戻ります。
+
+          「🔙終了」で除外モードを終了し、通常操作へ戻ります。
         </div>
 
         <div class="mobileHelpSection">
-          <b>⚙ 設定</b>
+          <b>⚙ 設定等</b>
 
-          左上の「⚙」から、次の設定を変更できます。
+          左上の「⚙」は表示設定、右下の「☰」は読込・検出・保存などの操作メニューです。
           <br />
           ・塗り色
           <br />
@@ -1200,12 +1243,37 @@
       let compareImgStartX = 0;
       let compareImgStartY = 0;
 
-      function showMsg(text) {
-        statusElm.textContent = text;
+      let statusHideTimer = null;
 
+      function showMsg(text, hideAfterMs = 5000) {
+        /*
+         * 以前の自動非表示予約が残っている場合は解除する。
+         */
+        if (statusHideTimer !== null) {
+          clearTimeout(statusHideTimer);
+          statusHideTimer = null;
+        }
+
+        statusElm.textContent = text;
         statusElm.style.display = "block";
+
+        /*
+         * hideAfterMsが0以下の場合は自動で消さない。
+         * AI解析中など、完了まで表示したい通知に使用する。
+         */
+        if (hideAfterMs > 0) {
+          statusHideTimer = setTimeout(() => {
+            hideMsg();
+          }, hideAfterMs);
+        }
       }
+
       function hideMsg() {
+        if (statusHideTimer !== null) {
+          clearTimeout(statusHideTimer);
+          statusHideTimer = null;
+        }
+
         statusElm.style.display = "none";
       }
       function checkOrientation() {
@@ -1371,7 +1439,7 @@
          */
         setMobileToolbarOpen(true);
 
-        showMsg("🔺 ポリゴン除外モード");
+        showMsg("🔺 ポリゴン除外モード", 0);
 
         draw();
       }
@@ -3120,7 +3188,7 @@
         pts = [];
         photos[current].pts = [];
 
-        showMsg("🤖 AI解析中...");
+        showMsg("🤖 AI解析中...", 0);
 
         const canvas = document.createElement("canvas");
 
